@@ -10,7 +10,7 @@ export async function detectFeu() {
     let cw = window.innerWidth;
     let ch = window.innerHeight;
 
-    let feu;
+    let detection;
     let result = await objectDetector.detect(canvas, 20, 0.2);
 
     //recherche du label le plus au centre ->result[j]
@@ -26,16 +26,12 @@ export async function detectFeu() {
 
     //Recherche et affichage du cercle cible
     if (j >= 0) {
-        if (!feu) {
-            feu = { 'x': result[j].bbox[0], 'y': result[j].bbox[1], 'dx': result[j].bbox[2], 'dy': result[j].bbox[3], 'status': [false, false, false] };
-        } else {
-            feu = { 'x': result[j].bbox[0], 'y': result[j].bbox[1], 'dx': result[j].bbox[2], 'dy': result[j].bbox[3], 'status': feu.status };
-        }
+        detection={ 'x': result[j].bbox[0], 'y': result[j].bbox[1], 'dx': result[j].bbox[2], 'dy': result[j].bbox[3]};
     } else {
-        feu = null;
+        detection = null;
     }
 
-    return feu;
+    return detection;
 }
 
 //calcul de la distance au centre (au carré)

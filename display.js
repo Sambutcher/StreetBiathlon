@@ -68,8 +68,8 @@ export function showCross() {
     ctx.lineTo(4 * cw / 10, ch / 2);
     ctx.moveTo(6 * cw / 10, ch / 2);
     ctx.lineTo(7 * cw / 10, ch / 2);
-    ctx.lineWidth = 2;
-    ctx.strokeStyle = 'grey';
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = 'white';
     ctx.stroke();
 }
 
@@ -110,4 +110,9 @@ export function showCartouches(cartouches) {
             ctx.drawImage(cartoucheVide, 5 + cw * i / 20, 5, cw / 20, cw / 10);
         }
     }
+}
+
+export function showDistance(taux){
+    ctx.fillStyle = "green";
+    ctx.fillRect(10+3*cw/20, 5, (cw-10-3*cw/20)*(1-taux), cw/10);
 }
