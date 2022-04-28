@@ -1,22 +1,21 @@
 import * as location from './location.js';
 
-let distanceParcourue=0;
+let distanceParcourue = 0;
 let canvas = document.getElementById('c');
 let ctx = canvas.getContext("2d");
 let cw = window.innerWidth;
 let ch = window.innerHeight;
 
-setInterval(()=>{
-  distanceParcourue+=location.distance();
-  
-    canvas.width = cw;
-    canvas.height = ch;
-    ctx.font = '48px';
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-    ctx.fillText(distanceParcourue, cw / 2, ch / 2);
 
-},1000);
+setInterval(async () => {
+  distanceParcourue += await location.distance();
+  canvas.width = cw;
+  canvas.height = ch;
+  ctx.font = '48px';
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillText(distanceParcourue, cw / 2, ch / 2);
+}, 5000);
 
 /*
 import * as display from './display.js';
