@@ -17,6 +17,7 @@ let cartouches = 3;
 let distance;
 let score = 0;
 let tentatives=0;
+let stars=0;
 let tirState = null;
 
 //init
@@ -46,7 +47,7 @@ async function loop() {
   }
   display.showCross();
   display.showCartouches(cartouches);
-  display.showScore(score,tentatives);
+  display.showScore(score,tentatives, stars);
   display.splash(tirState);
   if (cartouches == 0) {
     display.showDistance(distance / distRechargement);
@@ -84,6 +85,9 @@ async function tir() {
   
   cartouches = Math.max(0, cartouches - 1);
   if (cartouches == 0) {
+    if (feu.status[0] && feu.status[1] && feu.status[2]){
+      stars++;
+    }
     document.removeEventListener('click', tir);
     await location.initRechargement();
     rechargement();

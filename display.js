@@ -9,6 +9,7 @@ let cw = window.innerWidth;
 let ch = window.innerHeight;
 let cartoucheVide = new Image();
 let cartouchePleine = new Image();
+let star = new Image();
 
 //resize event pour modifier les variables de width/height
 window.addEventListener('resize', () => {
@@ -31,6 +32,7 @@ export async function init() {
 
     cartoucheVide.src = 'cartoucheVide.png';
     cartouchePleine.src = 'cartouchePleine.png';
+    star.src = 'star.png';
 
     let constraints = { audio: false, video: { facingMode: "environment" } };
     let stream = await navigator.mediaDevices.getUserMedia(constraints);
@@ -131,13 +133,22 @@ export function showDistance(taux) {
 export function splash(tirState) {
     if (tirState) {
         ctx.globalAlpha = 0.5;
-        ctx.fillStyle = (tirState=='pass')?'green':'red';
+        ctx.fillStyle = (tirState == 'pass') ? 'green' : 'red';
         ctx.fillRect(0, 0, cw, ch);
     }
 }
 
-export function showScore(score,tentatives) {
+export function showScore(score, tentatives, stars) {
     ctx.font = 'bold 48px sans serif';
-    ctx.fillStyle = 'red';
-    ctx.fillText(score+' / '+tentatives, 8 * cw / 10, ch - 24);
+    ctx.fillStyle = 'white';
+    let txt = score + ' / ' + tentatives;
+    let txtWidth = ctx.measureText(txt).width;
+    ctx.fillText(txt, cw / 20, ch -12);
+    for (let i = 0; i < stars; i++) {
+        ctx.drawImage(star, cw*(i+1) / 10 + txtWidth , ch - 48, 36,36);
+        
+        
+    }
+
 }
+
