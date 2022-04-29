@@ -1,4 +1,5 @@
 let objectDetector;
+let lastDetection=null;
 
 export async function init() {
     let model = await cocoSsd.load()
@@ -11,7 +12,7 @@ export async function detectFeu() {
     let ch = window.innerHeight;
 
     let detection;
-    let result = await objectDetector.detect(canvas, 20, 0.2);
+    let result = await objectDetector.detect(canvas, 20, 0.4);
 
     //recherche du label le plus au centre ->result[j]
     let j = -1;
@@ -24,11 +25,13 @@ export async function detectFeu() {
         }
     }
 
-    //Recherche et affichage du cercle cible
+    //Recherche et affichage du feu j
     if (j >= 0) {
         detection={ 'x': result[j].bbox[0], 'y': result[j].bbox[1], 'dx': result[j].bbox[2], 'dy': result[j].bbox[3]};
+        lastDetection=detection;
     } else {
-        detection = null;
+        detection = lastDetection;
+        lastDetection=null;
     }
 
     return detection;

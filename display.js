@@ -18,7 +18,7 @@ window.addEventListener('resize', () => {
     canvas.height = ch;
 })
 
-export function loading(){
+export function loading() {
     canvas.width = cw;
     canvas.height = ch;
     ctx.font = '48px sans serif';
@@ -28,7 +28,7 @@ export function loading(){
 }
 
 export async function init() {
-    
+
     cartoucheVide.src = 'cartoucheVide.png';
     cartouchePleine.src = 'cartouchePleine.png';
 
@@ -51,7 +51,12 @@ export async function init() {
 export function showFrame() {
     //Affichage de la frame
     cap.read(src);
-    let rect = new cv.Rect(Math.max(0, (vw - cw * W) / 2), 0, Math.min(vw, vh * cw / ch), vh);
+    let zoom = 4;
+    let x = Math.max(0, (vw - cw * W) / 2);
+    let dx = Math.min(vw, vh * cw / ch);
+    let alpha = 0.5 * (1 - 1 / zoom) * dx;
+    let beta = 0.5 * (1 - 1 / zoom) * vh;
+    let rect = new cv.Rect(x + alpha, beta, dx / zoom, vh / zoom);
     let dst = src.roi(rect);
     cv.resize(dst, dst, new cv.Size(cw, ch));
     cv.imshow(canvas, dst);
@@ -73,10 +78,10 @@ export function showCross() {
     ctx.stroke();
 
     ctx.beginPath();
-        ctx.arc(cw/2, ch/2, 1.5*cw/10, 0, 2 * Math.PI, false);
-        ctx.lineWidth = 3;
-        ctx.strokeStyle = 'white';
-        ctx.stroke();
+    ctx.arc(cw / 2, ch / 2, 1.5 * cw / 10, 0, 2 * Math.PI, false);
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = 'white';
+    ctx.stroke();
 }
 
 export function showFeu(feu) {
@@ -118,19 +123,21 @@ export function showCartouches(cartouches) {
     }
 }
 
-export function showDistance(taux){
+export function showDistance(taux) {
     ctx.fillStyle = "yellow";
-    ctx.fillRect(10+3*cw/20, 5, (cw-10-3*cw/20)*(1-taux), cw/10);
+    ctx.fillRect(10 + 3 * cw / 20, 5, (cw - 10 - 3 * cw / 20) * (1 - taux), cw / 10);
 }
 
-export function splash(color){
-    ctx.globalAlpha=0.5;
-    ctx.fillStyle = color;
-    ctx.fillRect(0, 0, cw, ch);
+export function splash(tirState) {
+    if (tirState) {
+        ctx.globalAlpha = 0.5;
+        ctx.fillStyle = (tirState=='pass')?'green':'red';
+        ctx.fillRect(0, 0, cw, ch);
+    }
 }
 
-export function showScore(score){
+export function showScore(score,tentatives) {
     ctx.font = 'bold 48px sans serif';
     ctx.fillStyle = 'red';
-    ctx.fillText(score, 9*cw/10, ch-24);
+    ctx.fillText(score+' / '+tentatives, 8 * cw / 10, ch - 24);
 }

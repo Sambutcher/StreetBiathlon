@@ -5,7 +5,7 @@ import * as detector from './detector.js';
 const FPS = 30;
 const distRechargement = 100;
 
-let feu={
+let feu = {
   'x': 0,
   'y': 0,
   'dx': 0,
@@ -15,7 +15,9 @@ let feu={
 };
 let cartouches = 3;
 let distance;
-let score=0;
+let score = 0;
+let tentatives=0;
+let tirState = null;
 
 //init
 display.loading();
@@ -28,9 +30,6 @@ async function loop() {
   let begin = Date.now();
 
   display.showFrame();
-  display.showCross();
-  display.showCartouches(cartouches);
-  display.showScore(score);
   let detection = await detector.detectFeu();
   if (detection) {
     feu = {
@@ -45,43 +44,49 @@ async function loop() {
   } else {
     feu.visible = false;
   }
-  
-  
-  if (cartouches==0){
-    display.showDistance(distance/distRechargement);
+  display.showCross();
+  display.showCartouches(cartouches);
+  display.showScore(score,tentatives);
+  display.splash(tirState);
+  if (cartouches == 0) {
+    display.showDistance(distance / distRechargement);
   }
 
-  let delay = Math.max(0,1000 / FPS - (Date.now() - begin));
+  let delay = Math.max(0, 1000 / FPS - (Date.now() - begin));
   setTimeout(loop, delay);
 }
 
 async function tir() {
   let cw = window.innerWidth;
   let ch = window.innerHeight;
+  tentatives++;
+
+  if (feu.visible) {
+    tirState = 'pass';
+
+    if ((!feu.status[0]) && Math.sqrt((feu.x + feu.dx / 2 - cw / 2) ** 2 + (feu.y + feu.dy / 6 - ch / 2) ** 2) < feu.dy / 8) {
+      feu.status[0] = true;
+      score++;
+    } else if ((!feu.status[1]) && Math.sqrt((feu.x + feu.dx / 2 - cw / 2) ** 2 + (feu.y + feu.dy / 2 - ch / 2) ** 2) < feu.dy / 8) {
+      feu.status[1] = true;
+      score++;
+    } else if ((!feu.status[2]) && Math.sqrt((feu.x + feu.dx / 2 - cw / 2) ** 2 + (feu.y + 5 * feu.dy / 6 - ch / 2) ** 2) < feu.dy / 8) {
+      feu.status[2] = true;
+      score++;
+    } else {
+      tirState = 'fail';
+    }
+
+  } else {
+    tirState = 'fail';
+  }
+  setTimeout(()=>{tirState = null;},250)
+  
   cartouches = Math.max(0, cartouches - 1);
   if (cartouches == 0) {
     document.removeEventListener('click', tir);
     await location.initRechargement();
     rechargement();
-  }
-  if (feu.visible) {
-    if (Math.sqrt((feu.x + feu.dx / 2 - cw / 2) ** 2 + (feu.y + feu.dy / 6 - ch / 2) ** 2) < feu.dy / 8) {
-      feu.status[0] = true;
-      display.splash("green");
-      score++;
-    } else if (Math.sqrt((feu.x + feu.dx / 2 - cw / 2) ** 2 + (feu.y + feu.dy / 2 - ch / 2) ** 2) < feu.dy / 8) {
-      feu.status[1] = true;
-      display.splash("green");
-      score++;
-    } else if (Math.sqrt((feu.x + feu.dx / 2 - cw / 2) ** 2 + (feu.y + 5 * feu.dy / 6 - ch / 2) ** 2) < feu.dy / 8) {
-      feu.status[2] = true;
-      display.splash("green");
-      score++;
-    } else {
-      display.splash("red");
-    }
-  } else {
-    display.splash("red");
   }
 }
 
@@ -93,7 +98,7 @@ async function rechargement() {
     cartouches = 3;
     feu.status = [false, false, false];
   } else {
-    setTimeout(rechargement,5000)
+    setTimeout(rechargement, 5000)
   }
 }
 
