@@ -21,7 +21,7 @@ window.addEventListener('resize', () => {
 export function loading(){
     canvas.width = cw;
     canvas.height = ch;
-    ctx.font = '48px';
+    ctx.font = '48px sans serif';
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
     ctx.fillText("Loading...", cw / 2, ch / 2);
@@ -68,9 +68,15 @@ export function showCross() {
     ctx.lineTo(4 * cw / 10, ch / 2);
     ctx.moveTo(6 * cw / 10, ch / 2);
     ctx.lineTo(7 * cw / 10, ch / 2);
-    ctx.lineWidth = 3;
+    ctx.lineWidth = 2;
     ctx.strokeStyle = 'white';
     ctx.stroke();
+
+    ctx.beginPath();
+        ctx.arc(cw/2, ch/2, 1.5*cw/10, 0, 2 * Math.PI, false);
+        ctx.lineWidth = 3;
+        ctx.strokeStyle = 'white';
+        ctx.stroke();
 }
 
 export function showFeu(feu) {
@@ -113,6 +119,18 @@ export function showCartouches(cartouches) {
 }
 
 export function showDistance(taux){
-    ctx.fillStyle = "green";
+    ctx.fillStyle = "yellow";
     ctx.fillRect(10+3*cw/20, 5, (cw-10-3*cw/20)*(1-taux), cw/10);
+}
+
+export function splash(color){
+    ctx.globalAlpha=0.5;
+    ctx.fillStyle = color;
+    ctx.fillRect(0, 0, cw, ch);
+}
+
+export function showScore(score){
+    ctx.font = 'bold 48px sans serif';
+    ctx.fillStyle = 'red';
+    ctx.fillText(score, 9*cw/10, ch-24);
 }
