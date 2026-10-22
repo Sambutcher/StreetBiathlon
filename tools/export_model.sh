@@ -11,8 +11,9 @@ RACINE="$(cd "$(dirname "$0")/.." && pwd)"
 TRAVAIL="$(mktemp -d)"
 trap 'rm -rf "$TRAVAIL"' EXIT
 
+# ultralytics < 8.4 : les versions suivantes ne savent plus exporter en TF.js.
 # PyTorch CPU pour éviter plusieurs Go de CUDA inutiles.
-command -v yolo >/dev/null || pipx install ultralytics \
+command -v yolo >/dev/null || pipx install "ultralytics<8.4" \
   --pip-args="--index-url https://download.pytorch.org/whl/cpu --extra-index-url https://pypi.org/simple"
 
 cd "$TRAVAIL"
