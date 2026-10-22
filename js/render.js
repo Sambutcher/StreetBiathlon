@@ -129,9 +129,21 @@ export function creerRendu(canvas) {
     ctx.restore();
   }
 
+  function diagnostic(lignes) {
+    ctx.save();
+    ctx.font = '12px ui-monospace, Menlo, monospace';
+    ctx.textAlign = 'right';
+    ctx.textBaseline = 'top';
+    ctx.fillStyle = 'rgba(0,0,0,0.6)';
+    ctx.fillRect(largeur - 150, margeHaut + 12, 142, lignes.length * 15 + 8);
+    ctx.fillStyle = '#0f0';
+    lignes.forEach((l, i) => ctx.fillText(l, largeur - 14, margeHaut + 16 + i * 15));
+    ctx.restore();
+  }
+
   return {
     get largeur() { return largeur; },
     get hauteur() { return hauteur; },
-    video, cible, viseur, cartouches, message, flash,
+    video, cible, viseur, cartouches, message, flash, diagnostic,
   };
 }

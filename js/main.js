@@ -2,13 +2,17 @@ import { demarrerCamera } from './camera.js';
 import { chargerDetecteur, detecter } from './detector.js';
 import { creerRendu } from './render.js';
 import { creerSuivi } from './tracker.js';
-import { nouvelEtat, entrerTir, sortirTir, tirer } from './game.js';
+import { versGris, estimerDecalage } from './flow.js';
+import { nouvelEtat, voirFeu, quitterFeu, tirer, serieEntamee } from './game.js';
 import { cadrage, letterbox, versEcran, plusProcheDe, ronds } from './geometry.js';
 
 const ZOOM = 2;
 const INTERVALLE_DETECTION_MS = 80;
 const DUREE_FLASH_MS = 250;
+const LARGEUR_FLUX = 120; // largeur de l'image réduite pour le flux optique
+const RAYON_FLUX = 12; // déplacement max mesuré par trame, en pixels de l'image réduite
 const URL_MODELE = 'models/yolo11n/model.json';
+const DEBUG = new URLSearchParams(location.search).has('debug');
 
 const accueil = document.getElementById('accueil');
 const bouton = document.getElementById('demarrer');
@@ -43,12 +47,16 @@ function lancer(entree) {
   canvasEntree.width = entree.largeur;
   canvasEntree.height = entree.hauteur;
   const ctxEntree = canvasEntree.getContext('2d', { willReadFrequently: true });
+  const canvasFlux = document.createElement('canvas');
+  const ctxFlux = canvasFlux.getContext('2d', { willReadFrequently: true });
+  let grisPrec = null;
 
   let etat = nouvelEtat();
   let cible = null;
   let detectionEnCours = false;
   let derniereDetection = 0;
   let dernierTir = { resultat: null, t: -Infinity };
+  const stats = { images: 0, detections: 0, inferenceMs: 0, fluxMs: 0, flux: { dx: 0, dy: 0 }, debut: 0, texte: [] };
 
   canvas.addEventListener('pointerdown', (ev) => {
     ev.preventDefault();
@@ -59,19 +67,58 @@ function lancer(entree) {
     if (r.resultat) dernierTir = { resultat: r.resultat, t: performance.now() };
   });
 
-  // Une seule inférence à la fois, sur la même zone que celle affichée.
+  // Flux optique : déplacement de l'image depuis la trame précédente, appliqué à la cible.
+  function suivreImage(c) {
+    const t0 = performance.now();
+    const k = LARGEUR_FLUX / rendu.largeur; // écran → image réduite
+    const l = LARGEUR_FLUX;
+    const h = Math.round(rendu.hauteur * k);
+    if (canvasFlux.width !== l || canvasFlux.height !== h) {
+      canvasFlux.width = l;
+      canvasFlux.height = h;
+      grisPrec = null;
+    }
+    ctxFlux.drawImage(video, c.sx, c.sy, c.sw, c.sh, 0, 0, l, h);
+    const gris = versGris(ctxFlux.getImageData(0, 0, l, h).data);
+    if (grisPrec) {
+      const b = suivi.lire(t0).cible;
+      // Autour de la cible (boîte agrandie ×2), sinon bloc central.
+      const zone = b
+        ? { x: (b.x - b.w / 2) * k, y: (b.y - b.h / 2) * k, w: b.w * 2 * k, h: b.h * 2 * k }
+        : { x: l / 4, y: h / 4, w: l / 2, h: h / 2 };
+      const d = estimerDecalage(grisPrec, gris, l, h, zone, RAYON_FLUX);
+      if (d.fiable && (d.dx || d.dy)) suivi.deplacer(d.dx / k, d.dy / k);
+      stats.flux = d;
+    }
+    grisPrec = gris;
+    stats.fluxMs = performance.now() - t0;
+  }
+
+  // Une seule inférence à la fois, sur la même zone que celle affichée. La boîte détectée
+  // décrit l'image du lancement : on la décale du mouvement survenu pendant l'inférence.
   function lancerDetection(c, t) {
     detectionEnCours = true;
     derniereDetection = t;
+    const cumulDepart = suivi.cumul;
     const lb = letterbox(c.sw, c.sh, canvasEntree.width, canvasEntree.height);
     ctxEntree.fillStyle = 'rgb(114,114,114)';
     ctxEntree.fillRect(0, 0, canvasEntree.width, canvasEntree.height);
     ctxEntree.drawImage(video, c.sx, c.sy, c.sw, c.sh, lb.dx, lb.dy, lb.dw, lb.dh);
     detecter(canvasEntree)
       .then((boites) => {
-        const ecran = boites.map((b) => versEcran(b, lb, rendu.largeur, rendu.hauteur));
-        const centre = { x: rendu.largeur / 2, y: rendu.hauteur / 2 };
-        suivi.maj(plusProcheDe(ecran, centre), performance.now());
+        const fin = performance.now();
+        stats.inferenceMs = fin - t;
+        stats.detections++;
+        const cumul = suivi.cumul;
+        const ecran = boites.map((b) => {
+          const e = versEcran(b, lb, rendu.largeur, rendu.hauteur);
+          return { ...e, x: e.x + cumul.x - cumulDepart.x, y: e.y + cumul.y - cumulDepart.y };
+        });
+        const reference = suivi.lire(fin).cible;
+        const centre = reference
+          ? { x: reference.x + reference.w / 2, y: reference.y + reference.h / 2 }
+          : { x: rendu.largeur / 2, y: rendu.hauteur / 2 };
+        suivi.maj(plusProcheDe(ecran, centre), fin);
       })
       .catch((e) => console.error(e))
       .finally(() => { detectionEnCours = false; });
@@ -79,25 +126,47 @@ function lancer(entree) {
 
   function image(t) {
     const c = cadrage(video.videoWidth, video.videoHeight, rendu.largeur, rendu.hauteur, ZOOM);
+    suivreImage(c);
     if (!detectionEnCours && t - derniereDetection >= INTERVALLE_DETECTION_MS) lancerDetection(c, t);
 
     const lu = suivi.lire(t);
-    etat = lu.actif ? entrerTir(etat) : sortirTir(etat);
+    if (lu.actif) etat = voirFeu(etat);
+    else if (etat.cibleVisible) etat = quitterFeu(etat);
     cible = lu.actif ? lu.cible : null;
 
     rendu.video(video, c);
-    if (etat.mode === 'tir') {
+    if (cible) {
       rendu.cible(cible, ronds(cible), etat.touches);
       rendu.viseur();
-      rendu.cartouches(etat.cartouches);
-      if (etat.cartouches === 0) rendu.message('Plus de cartouches');
-    } else {
-      rendu.message('Cherchez un feu…');
     }
+    if (cible || serieEntamee(etat)) rendu.cartouches(etat.cartouches);
+    if (cible && etat.cartouches === 0) rendu.message('Plus de cartouches');
+    else if (!cible) rendu.message(serieEntamee(etat) ? 'Retrouvez le feu…' : 'Cherchez un feu…');
+
     const age = t - dernierTir.t;
     if (age < DUREE_FLASH_MS) rendu.flash(dernierTir.resultat, 1 - age / DUREE_FLASH_MS);
+    if (DEBUG) diagnostic(t);
 
     requestAnimationFrame(image);
   }
+
+  function diagnostic(t) {
+    stats.images++;
+    if (t - stats.debut >= 1000) {
+      const s = (t - stats.debut) / 1000;
+      stats.texte = [
+        `${(stats.images / s).toFixed(0)} img/s`,
+        `${(stats.detections / s).toFixed(1)} détections/s`,
+        `inférence ${stats.inferenceMs.toFixed(0)} ms`,
+        `flux ${stats.fluxMs.toFixed(1)} ms`,
+      ];
+      stats.images = 0;
+      stats.detections = 0;
+      stats.debut = t;
+    }
+    const f = stats.flux;
+    rendu.diagnostic([...stats.texte, `décalage ${f.fiable ? `${f.dx},${f.dy}` : '—'}`]);
+  }
+
   requestAnimationFrame(image);
 }

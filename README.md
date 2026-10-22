@@ -23,6 +23,9 @@ node --test tests/          # tests unitaires (Node ≥ 18, aucune dépendance)
 python3 tools/serve.py      # HTTPS sur https://<ip-du-pc>:8443 (certificat auto-signé)
 ```
 
+Ajouter `?debug` à l'adresse pour afficher images/s, détections/s, durée d'inférence et flux optique.
+`tests/mire.html` montre la détection sur des photos de feux (clic = plein écran pour viser).
+
 Sur l'iPhone, ouvrir l'adresse affichée et accepter le certificat. La caméra et la détection
 fonctionnent ; le mode hors ligne (service worker) ne se teste que sur GitHub Pages, Safari
 refusant les service workers avec un certificat auto-signé.
@@ -32,7 +35,8 @@ refusant les service workers avec un certificat auto-signé.
 | `js/main.js` | démarrage, boucle d'affichage, tirs |
 | `js/camera.js` | caméra arrière |
 | `js/detector.js` | YOLO11n via TensorFlow.js : décodage, NMS, classe « traffic light » |
-| `js/tracker.js` | lissage de la cible et hystérésis du mode tir |
+| `js/flow.js` | flux optique (recherche de bloc) : la cible suit l'image entre deux détections (pur, testé) |
+| `js/tracker.js` | suivi de la cible, compensation de latence, hystérésis (pur, testé) |
 | `js/game.js` | état du jeu (pur, testé) |
 | `js/geometry.js` | cadrage, letterbox, ronds, test de touche (pur, testé) |
 | `js/render.js` | dessin canvas |

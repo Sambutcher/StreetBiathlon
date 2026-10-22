@@ -1,6 +1,6 @@
 // Service worker : tout le jeu est mis en cache à l'installation pour jouer hors ligne.
 // Changer VERSION à chaque mise en ligne, sinon les téléphones gardent l'ancienne version.
-const VERSION = '2026-10-22.1';
+const VERSION = '2026-10-22.2';
 const CACHE = `street-biathlon-${VERSION}`;
 
 const FICHIERS = [
@@ -19,6 +19,7 @@ const FICHIERS = [
   'js/geometry.js',
   'js/render.js',
   'js/tracker.js',
+  'js/flow.js',
   'models/yolo11n/model.json',
   'models/yolo11n/group1-shard1of3.bin',
   'models/yolo11n/group1-shard2of3.bin',
