@@ -46,7 +46,7 @@ export function plusProcheDe(boites, point) {
 
 // Les 3 ronds de la cible, alignés sur les 3 lampes du feu (haut, milieu, bas).
 export function ronds(cible) {
-  const r = Math.min(cible.w / 2, cible.h / 6) * 0.8;
+  const r = Math.min(cible.w / 2, cible.h / 6) * 0.65;
   const x = cible.x + cible.w / 2;
   return [1 / 6, 1 / 2, 5 / 6].map((f) => ({ x, y: cible.y + cible.h * f, r }));
 }

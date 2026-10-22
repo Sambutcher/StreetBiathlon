@@ -26,12 +26,9 @@ export function creerRendu(canvas) {
   function cible(boite, listeRonds, touches) {
     const marge = boite.w * 0.15;
     ctx.save();
+    // Plaque blanche à angles droits, sans contour, comme une cible de biathlon.
     ctx.fillStyle = '#f4f4f0';
-    ctx.strokeStyle = '#111';
-    ctx.lineWidth = 2;
-    plaque(boite.x - marge, boite.y - marge, boite.w + 2 * marge, boite.h + 2 * marge, marge);
-    ctx.fill();
-    ctx.stroke();
+    ctx.fillRect(boite.x - marge, boite.y - marge, boite.w + 2 * marge, boite.h + 2 * marge);
     listeRonds.forEach((r, i) => {
       ctx.beginPath();
       ctx.arc(r.x, r.y, r.r, 0, 2 * Math.PI);

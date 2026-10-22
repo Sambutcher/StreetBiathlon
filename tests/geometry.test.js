@@ -30,7 +30,7 @@ test('plusProcheDe choisit la boîte la plus centrée', () => {
 test('ronds alignés sur les 3 lampes', () => {
   const r = ronds({ x: 0, y: 0, w: 30, h: 90 });
   assert.deepEqual(r.map((o) => o.y), [15, 45, 75]);
-  assert.ok(r.every((o) => o.x === 15 && o.r === 12));
+  assert.ok(r.every((o) => o.x === 15 && o.r === 9.75));
 });
 
 test('rondVise : dans le rond, à côté, et le plus proche', () => {
