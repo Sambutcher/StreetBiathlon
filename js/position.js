@@ -16,11 +16,11 @@ export function suivrePosition(rappel, rappelErreur, { simulation = false } = {}
   return () => navigator.geolocation.clearWatch(id);
 }
 
-// Course simulée vers le nord à ~3 m/s, bruit de ±5 m, une position par seconde.
+// Course simulée vers le nord à ~3 m/s, bruit de ±2 m, une position par seconde.
 function simulerCourse(rappel) {
   const depart = { lat: 48.8566, lon: 2.3522 };
   const debut = Date.now();
-  const bruit = () => (Math.random() - 0.5) * 10;
+  const bruit = () => (Math.random() - 0.5) * 4;
   const id = setInterval(() => {
     const t = Date.now();
     const nord = ((t - debut) / 1000) * 3 + bruit();

@@ -13,18 +13,23 @@ export function distanceM(a, b) {
   return 2 * RAYON_TERRE * Math.asin(Math.min(1, Math.sqrt(h)));
 }
 
-export function creerCourse({ distance = 100, precisionMax = 30, memoireMs = 10000, confirmations = 2 } = {}) {
+export function creerCourse({ distance = 100, precisionMax = 30, memoireMs = 10000, vitesseMax = 12 } = {}) {
   let recentes = []; // positions assez précises des dernières secondes
   let derniere = null; // dernière position reçue, même imprécise (affichage de la précision)
+  let retenue = null; // dernière position acceptée (filtre de vitesse)
   let lancee = false;
   let depart = null;
   let parcourue = 0;
-  let loin = 0; // positions consécutives au-delà de la distance
 
   return {
     ajouter(fix) {
       derniere = fix;
       if (fix.precision > precisionMax) return;
+      // Saut aberrant du GPS : déplacement impossible à pied (> vitesseMax m/s) depuis la
+      // dernière position acceptée. Le tir se débloque ainsi dès la première position valide.
+      const dt = retenue ? (fix.t - retenue.t) / 1000 : 0;
+      if (dt > 0 && distanceM(retenue, fix) / dt > vitesseMax) return;
+      retenue = fix;
       recentes = [...recentes.filter((f) => fix.t - f.t <= memoireMs), fix];
       if (!lancee) return;
       if (!depart) {
@@ -32,8 +37,6 @@ export function creerCourse({ distance = 100, precisionMax = 30, memoireMs = 100
         return;
       }
       parcourue = distanceM(depart, fix);
-      // Une position aberrante isolée ne suffit pas : il en faut plusieurs de suite.
-      loin = parcourue >= distance ? loin + 1 : 0;
     },
 
     // Nouveau départ : la meilleure position récente, sinon la prochaine position précise.
@@ -44,11 +47,10 @@ export function creerCourse({ distance = 100, precisionMax = 30, memoireMs = 100
         : null;
       lancee = true;
       parcourue = 0;
-      loin = 0;
     },
 
     etat() {
-      const phase = !lancee ? 'arret' : !depart ? 'gps' : loin >= confirmations ? 'fini' : 'course';
+      const phase = !lancee ? 'arret' : !depart ? 'gps' : parcourue >= distance ? 'fini' : 'course';
       return { phase, distance: parcourue, objectif: distance, precision: derniere ? derniere.precision : null };
     },
   };

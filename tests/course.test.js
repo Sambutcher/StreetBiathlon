@@ -30,7 +30,7 @@ test('départ = meilleure position récente', () => {
   c.ajouter(fix(10, 1000, 4)); // la plus précise
   c.ajouter(fix(20, 2000, 12));
   c.demarrer(2500);
-  c.ajouter(fix(60, 3000));
+  c.ajouter(fix(60, 20000));
   assert.equal(c.etat().phase, 'course');
   assert.ok(Math.abs(c.etat().distance - 50) < 0.5, 'mesuré depuis la position à 10 m');
 });
@@ -48,27 +48,33 @@ test('sans position récente : attente du GPS puis départ à la prochaine préc
   assert.equal(c.etat().distance, 0);
 });
 
-test('99 m ne suffisent pas, une position isolée à 120 m non plus, deux de suite oui', () => {
+test('99 m ne suffisent pas, déblocage dès la première position à 100 m, rebloqué en deçà', () => {
   const c = creerCourse();
   c.ajouter(fix(0, 0));
   c.demarrer(0);
-  c.ajouter(fix(99, 1000));
+  for (let i = 1; i <= 33; i++) c.ajouter(fix(i * 3, i * 1000)); // 3 m/s jusqu'à 99 m
   assert.equal(c.etat().phase, 'course');
-  c.ajouter(fix(120, 2000));
-  assert.equal(c.etat().phase, 'course', 'une seule position au-delà');
-  c.ajouter(fix(90, 3000));
-  c.ajouter(fix(101, 4000));
-  assert.equal(c.etat().phase, 'course');
-  c.ajouter(fix(103, 5000));
-  assert.equal(c.etat().phase, 'fini');
+  c.ajouter(fix(101, 34000));
+  assert.equal(c.etat().phase, 'fini', 'vert sans attendre une deuxième position');
+  c.ajouter(fix(108, 36000));
   assert.ok(c.etat().distance > 100, 'distance non plafonnée');
-  c.ajouter(fix(85, 6000));
+  c.ajouter(fix(85, 41000));
   assert.equal(c.etat().phase, 'course', 'revenir sous 100 m rebloque le tir');
   assert.ok(Math.abs(c.etat().distance - 85) < 0.5);
-  c.ajouter(fix(105, 7000));
-  assert.equal(c.etat().phase, 'course', 'il faut de nouveau deux positions au-delà');
-  c.ajouter(fix(106, 8000));
+  c.ajouter(fix(104, 47000));
   assert.equal(c.etat().phase, 'fini');
+});
+
+test('saut aberrant du GPS ignoré (vitesse impossible à pied)', () => {
+  const c = creerCourse();
+  c.ajouter(fix(0, 0));
+  c.demarrer(0);
+  c.ajouter(fix(30, 10000));
+  c.ajouter(fix(140, 11000)); // 110 m en 1 s
+  assert.equal(c.etat().phase, 'course');
+  assert.ok(Math.abs(c.etat().distance - 30) < 0.5);
+  c.ajouter(fix(40, 12000)); // la course reprend normalement
+  assert.ok(Math.abs(c.etat().distance - 40) < 0.5);
 });
 
 test('positions imprécises ignorées pendant la course', () => {
@@ -85,21 +91,22 @@ test('à vol d\'oiseau : un aller-retour ne compte pas', () => {
   const c = creerCourse();
   c.ajouter(fix(0, 0));
   c.demarrer(0);
-  for (let i = 1; i <= 6; i++) c.ajouter(fix(60, i * 1000, 5, i % 2 ? 0 : 1));
+  for (let i = 1; i <= 20; i++) c.ajouter(fix(i * 3, i * 1000)); // aller : 60 m
+  for (let i = 1; i <= 20; i++) c.ajouter(fix(60 - i * 3, 20000 + i * 1000)); // retour
   assert.equal(c.etat().phase, 'course');
-  assert.ok(c.etat().distance < 61);
+  assert.ok(c.etat().distance < 1, `${c.etat().distance} m : on est revenu au départ`);
 });
 
 test('nouveau départ : remise à zéro', () => {
   const c = creerCourse();
   c.ajouter(fix(0, 0));
   c.demarrer(0);
-  c.ajouter(fix(110, 1000));
-  c.ajouter(fix(112, 2000));
+  c.ajouter(fix(110, 40000));
+  c.ajouter(fix(112, 41000));
   assert.equal(c.etat().phase, 'fini');
-  c.demarrer(2500);
+  c.demarrer(41500);
   assert.equal(c.etat().phase, 'course');
   assert.equal(c.etat().distance, 0);
-  c.ajouter(fix(150, 3000));
+  c.ajouter(fix(150, 54000));
   assert.ok(Math.abs(c.etat().distance - 38) < 0.5, 'depuis la position à 112 m');
 });
