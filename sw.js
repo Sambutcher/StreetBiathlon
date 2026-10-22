@@ -20,7 +20,9 @@ const FICHIERS = [
   'js/render.js',
   'js/tracker.js',
   'models/yolo11n/model.json',
-  // FICHIERS_MODELE
+  'models/yolo11n/group1-shard1of3.bin',
+  'models/yolo11n/group1-shard2of3.bin',
+  'models/yolo11n/group1-shard3of3.bin',
 ];
 
 self.addEventListener('install', (ev) => {
