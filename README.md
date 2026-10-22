@@ -58,7 +58,8 @@ l'ancienne version en cache.
 `models/yolo11n/` est YOLO11n (COCO) converti en TensorFlow.js, entrée 224×384 (portrait) :
 
 ```bash
-tools/export_model.sh            # installe ultralytics via pipx si besoin
+gh workflow run export-model.yml -R Sambutcher/StreetBiathlon   # conversion sur GitHub Actions
+tools/export_model.sh            # ou en local (nécessite un CPU avec AVX)
 ```
 
 Puis mettre à jour la liste des fichiers du modèle dans `sw.js`.
@@ -66,8 +67,16 @@ Puis mettre à jour la liste des fichiers du modèle dans `sw.js`.
 Le zoom numérique (`ZOOM` dans `js/main.js`) agrandit le centre de l'image : les feux lointains
 couvrent plus de pixels pour le modèle.
 
+## Mise en ligne
+
+GitHub Pages publie la branche `main` telle quelle (aucun build). Pour une nouvelle version :
+changer `VERSION` dans `sw.js` **et** dans `index.html` (`node --test tests/` le vérifie, ainsi
+que la présence de chaque fichier dans le cache hors ligne), merger dans `main`, puis créer la
+release (`gh release create vX.Y.Z`).
+
 ## Licences
 
-- YOLO11n © Ultralytics, **AGPL-3.0** : le jeu qui l'embarque doit rester open source
-  sous une licence compatible (fichier `LICENSE` à ajouter).
+- Street Biathlon : **AGPL-3.0** (voir `LICENSE`), imposée par le modèle de détection.
+- YOLO11n © Ultralytics, AGPL-3.0.
 - TensorFlow.js 4.22.0 (`vendor/`), Apache-2.0.
+- Photos de `tests/mire.html` : Wikimedia Commons, licences libres (lien sous chaque photo).

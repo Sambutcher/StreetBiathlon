@@ -1,14 +1,10 @@
 # Conversion de YOLO11n en TensorFlow.js (TensorFlow exige l'AVX, absent du PC de dev).
 # Résultat : artefact « yolo11n-tfjs » à copier dans models/yolo11n/.
+# Lancement manuel : gh workflow run export-model.yml -R Sambutcher/StreetBiathlon
 name: Export du modèle
 
 on:
   workflow_dispatch:
-  push:
-    paths:
-      - tools/export_model.sh
-      - tools/check_model.mjs
-      - .github/workflows/export-model.yml
 
 jobs:
   export:

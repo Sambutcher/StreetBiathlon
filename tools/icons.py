@@ -13,11 +13,11 @@ def icone(taille):
     t = taille * ECHELLE
     img = Image.new("RGB", (t, t), "#111111")
     d = ImageDraw.Draw(img)
-    # Plaque verticale façon feu tricolore, 3 ronds dont le premier blanchi.
+    # Plaque verticale à angles droits comme la cible du jeu, 3 ronds dont le premier blanchi.
     w, h = t * 0.34, t * 0.74
     x0, y0 = (t - w) / 2, (t - h) / 2
-    d.rounded_rectangle([x0, y0, x0 + w, y0 + h], radius=w * 0.22, fill="#f4f4f0")
-    r = min(w / 2, h / 6) * 0.78
+    d.rectangle([x0, y0, x0 + w, y0 + h], fill="#f4f4f0")
+    r = min(w / 2, h / 6) * 0.65
     for i, f in enumerate((1 / 6, 1 / 2, 5 / 6)):
         cx, cy = t / 2, y0 + h * f
         boite = [cx - r, cy - r, cx + r, cy + r]

@@ -202,9 +202,6 @@
     pied.id = 'totaux';
     pied.innerHTML = `<th>Détectés / ${IMAGES.length}</th>${totaux.map((t) => `<th>${t.vue}</th><th>${t.centre}</th>`).join('')}`;
     tableau.append(pied);
-    // Résumé lisible dans la console (et par chromium --headless --enable-logging=stderr).
-    console.log(`MIRE vue entière ${trouves}/${IMAGES.length} ; distance ${ECHELLES.map((e, i) => `${e * 100} % : vue ${totaux[i].vue}, centre ${totaux[i].centre}`).join(' | ')}`);
-    for (const l of tableau.tBodies[0].rows) console.log(`MIRE ${[...l.cells].map((c) => c.textContent).join(' ; ')}`);
   </script>
 </body>
 </html>

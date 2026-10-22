@@ -1,7 +1,8 @@
 // Position GPS pendant toute la partie, et écran maintenu allumé (iOS coupe le GPS des pages
 // web quand l'écran se verrouille). Mode simulation pour tester sans courir.
 
-// Appelle rappel({ lat, lon, precision, t }) à chaque position, ou rappelErreur(message).
+// Appelle rappel({ lat, lon, precision, t }) à chaque position, rappelErreur(message) si le GPS
+// est refusé ou absent.
 export function suivrePosition(rappel, rappelErreur, { simulation = false } = {}) {
   if (simulation) return simulerCourse(rappel);
   if (!('geolocation' in navigator)) {
@@ -10,7 +11,8 @@ export function suivrePosition(rappel, rappelErreur, { simulation = false } = {}
   }
   const id = navigator.geolocation.watchPosition(
     (p) => rappel({ lat: p.coords.latitude, lon: p.coords.longitude, precision: p.coords.accuracy, t: Date.now() }),
-    (e) => rappelErreur(e.code === 1 ? 'Autorisez la localisation pour courir' : 'Recherche du GPS…'),
+    // Seul le refus est signalé ; une attente du GPS (délai, signal perdu) se résout d'elle-même.
+    (e) => { if (e.code === 1) rappelErreur('Autorisez la localisation pour courir'); },
     { enableHighAccuracy: true, maximumAge: 0, timeout: 20000 },
   );
   return () => navigator.geolocation.clearWatch(id);
