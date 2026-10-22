@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { cadrage, letterbox, versEcran, plusProcheDe, ronds, rondVise } from '../js/geometry.js';
+import { cadrage, letterbox, versEcran, plusProcheDe, ronds, rondVise, zoneDetection, zoneVersSource } from '../js/geometry.js';
 
 test('cadrage couvre l\'écran puis zoome au centre', () => {
   // Vidéo portrait 720×1280 sur écran 375×667 : même ratio ≈, zoom 2 → moitié centrale.
@@ -39,4 +39,40 @@ test('rondVise : dans le rond, à côté, et le plus proche', () => {
   assert.equal(rondVise(r, { x: 15, y: 30 }), -1);
   assert.equal(rondVise(r, { x: 100, y: 100 }), -1);
   assert.equal(rondVise(r, { x: 20, y: 72 }), 2);
+});
+
+test('zoneDetection : autour de la cible, au ratio du modèle, bornée à l\'écran', () => {
+  const ratio = 224 / 384;
+  const z = zoneDetection({ x: 180, y: 300, w: 15, h: 40 }, 375, 667, ratio, 0);
+  assert.equal(z.type, 'cible');
+  assert.ok(Math.abs(z.w / z.h - ratio) < 1e-9);
+  assert.equal(z.h, 667 / 4, 'hauteur minimale : quart de l\'écran');
+  assert.ok(Math.abs(z.x + z.w / 2 - 187.5) < 1e-9 && Math.abs(z.y + z.h / 2 - 320) < 1e-9, 'centrée sur la cible');
+  const bord = zoneDetection({ x: 0, y: 0, w: 30, h: 80 }, 375, 667, ratio, 0);
+  assert.equal(bord.x, 0);
+  assert.equal(bord.y, 0);
+  assert.equal(bord.h, 320);
+  const geante = zoneDetection({ x: 100, y: 100, w: 100, h: 400 }, 375, 667, ratio, 0);
+  assert.ok(geante.w <= 375 && geante.h <= 667);
+});
+
+test('zoneDetection : sans cible, alternance vue entière / centre', () => {
+  const ratio = 224 / 384;
+  assert.deepEqual(zoneDetection(null, 375, 667, ratio, 0), { x: 0, y: 0, w: 375, h: 667, type: 'vue' });
+  const c = zoneDetection(null, 375, 667, ratio, 1);
+  assert.equal(c.type, 'centre');
+  assert.equal(c.h, 333.5);
+  assert.ok(Math.abs(c.x + c.w / 2 - 187.5) < 1e-9);
+});
+
+test('aller-retour zone écran → vidéo → entrée modèle → écran', () => {
+  const c = cadrage(1080, 1920, 375, 667, 2);
+  const zone = zoneDetection({ x: 200, y: 250, w: 12, h: 30 }, 375, 667, 224 / 384, 0);
+  const src = zoneVersSource(zone, c, 375, 667);
+  const lb = letterbox(src.sw, src.sh, 224, 384);
+  // Une boîte occupant toute l'image placée dans l'entrée revient exactement sur la zone.
+  const e = versEcran({ x: lb.dx, y: lb.dy, w: lb.dw, h: lb.dh }, lb, zone.w, zone.h);
+  for (const [a, b] of [[e.x, 0], [e.y, 0], [e.w, zone.w], [e.h, zone.h]]) assert.ok(Math.abs(a - b) < 1e-9);
+  // Source à l'intérieur du cadrage vidéo.
+  assert.ok(src.sx >= c.sx - 1e-9 && src.sx + src.sw <= c.sx + c.sw + 1e-9);
 });

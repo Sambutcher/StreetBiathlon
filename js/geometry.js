@@ -64,3 +64,29 @@ export function rondVise(listeRonds, point) {
   });
   return indice;
 }
+
+// Zone de l'écran à faire analyser par le modèle, au ratio de son entrée (largeur / hauteur) :
+// autour du feu suivi, sinon alternance vue entière / zone centrale (feux lointains visés).
+export function zoneDetection(cible, ecranW, ecranH, ratio, cycle) {
+  const borner = (cx, cy, h) => {
+    let w = h * ratio;
+    if (w > ecranW) { w = ecranW; h = w / ratio; }
+    if (h > ecranH) { h = ecranH; w = h * ratio; }
+    const x = Math.min(Math.max(cx - w / 2, 0), ecranW - w);
+    const y = Math.min(Math.max(cy - h / 2, 0), ecranH - h);
+    return { x, y, w, h };
+  };
+  if (cible) {
+    const h = Math.max(cible.h * 4, ecranH / 4);
+    return { ...borner(cible.x + cible.w / 2, cible.y + cible.h / 2, h), type: 'cible' };
+  }
+  if (cycle % 2) return { ...borner(ecranW / 2, ecranH / 2, ecranH / 2), type: 'centre' };
+  return { x: 0, y: 0, w: ecranW, h: ecranH, type: 'vue' };
+}
+
+// Rectangle de la vidéo correspondant à une zone de l'écran, pour un cadrage donné.
+export function zoneVersSource(zone, c, ecranW, ecranH) {
+  const kx = c.sw / ecranW;
+  const ky = c.sh / ecranH;
+  return { sx: c.sx + zone.x * kx, sy: c.sy + zone.y * ky, sw: zone.w * kx, sh: zone.h * ky };
+}

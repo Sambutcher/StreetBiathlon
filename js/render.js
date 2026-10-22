@@ -129,6 +129,16 @@ export function creerRendu(canvas) {
     ctx.restore();
   }
 
+  // Cadre de la zone analysée par le modèle (mode debug).
+  function zone(z) {
+    ctx.save();
+    ctx.setLineDash([6, 4]);
+    ctx.lineWidth = 1.5;
+    ctx.strokeStyle = z.type === 'cible' ? '#0f0' : z.type === 'centre' ? '#0cf' : '#ff0';
+    ctx.strokeRect(z.x + 1, z.y + 1, z.w - 2, z.h - 2);
+    ctx.restore();
+  }
+
   function diagnostic(lignes) {
     ctx.save();
     ctx.font = '12px ui-monospace, Menlo, monospace';
@@ -144,6 +154,6 @@ export function creerRendu(canvas) {
   return {
     get largeur() { return largeur; },
     get hauteur() { return hauteur; },
-    video, cible, viseur, cartouches, message, flash, diagnostic,
+    video, cible, viseur, cartouches, message, flash, zone, diagnostic,
   };
 }

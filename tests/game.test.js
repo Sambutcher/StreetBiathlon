@@ -62,17 +62,37 @@ test('rechargement : 3 balles tirées puis feu quitté', () => {
   assert.deepEqual(quitterFeu(etat), nouvelEtat());
 });
 
-test('suivi : confirmation, recalage sans retard et oubli après persistance', () => {
-  const s = creerSuivi({ confirmations: 2, persistanceMs: 1000, lissageTaille: 0.5 });
+test('suivi : confirmation, position amortie ou recalée, oubli après persistance', () => {
+  const s = creerSuivi({ confirmations: 2, persistanceMs: 1000 });
   s.maj({ x: 0, y: 0, w: 10, h: 30 }, 0);
   assert.equal(s.lire(0).actif, false);
   s.maj({ x: 4, y: 0, w: 10, h: 30 }, 100);
   assert.equal(s.lire(100).actif, true);
-  assert.equal(s.lire(100).cible.x, 4, 'position de la détection, sans lerp');
+  assert.equal(s.lire(100).cible.x, 2, 'petit écart (bruit) amorti de moitié');
+  s.maj({ x: 12, y: 0, w: 10, h: 30 }, 200);
+  assert.equal(s.lire(200).cible.x, 12, 'écart > 25 % de la hauteur : recalage direct');
   s.maj(null, 900);
   assert.equal(s.lire(900).actif, true);
-  assert.equal(s.lire(1200).actif, false);
-  assert.equal(s.lire(1200).cible, null);
+  assert.equal(s.lire(1300).actif, false);
+  assert.equal(s.lire(1300).cible, null);
+});
+
+test('suivi : taille figée sous un bruit de ±8 %', () => {
+  const s = creerSuivi();
+  const bruit = [1, 1.08, 0.93, 1.05, 0.92, 1.07, 0.95, 1.03, 0.94, 1.08];
+  bruit.forEach((f, i) => s.maj({ x: 100, y: 100, w: 20 * f, h: 60 * f }, i * 100));
+  const c = s.lire(1000).cible;
+  assert.equal(c.w, 20);
+  assert.equal(c.h, 60);
+});
+
+test('suivi : la taille suit un vrai changement (+30 %)', () => {
+  const s = creerSuivi();
+  s.maj({ x: 100, y: 100, w: 20, h: 60 }, 0);
+  for (let i = 1; i <= 8; i++) s.maj({ x: 97, y: 91, w: 26, h: 78 }, i * 100);
+  const c = s.lire(900).cible;
+  assert.ok(Math.abs(c.h - 78) < 78 * 0.03, `hauteur ${c.h} devrait rejoindre 78`);
+  assert.ok(Math.abs(c.w - 26) < 26 * 0.03, `largeur ${c.w} devrait rejoindre 26`);
 });
 
 test('suivi : la cible suit le flux optique et cumule le déplacement', () => {

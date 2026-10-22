@@ -3,7 +3,7 @@
 // dans le repère de l'entrée du modèle. `tf` est le global chargé par vendor/tf.min.js.
 
 const CLASSE_FEU = 9; // « traffic light » dans COCO
-const SEUIL_SCORE = 0.3;
+const SEUIL_SCORE = 0.25;
 const SEUIL_IOU = 0.45;
 
 let modele = null;

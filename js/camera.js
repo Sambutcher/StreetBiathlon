@@ -3,7 +3,7 @@
 export async function demarrerCamera(video) {
   const flux = await navigator.mediaDevices.getUserMedia({
     audio: false,
-    video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } },
+    video: { facingMode: 'environment', width: { ideal: 1920 }, height: { ideal: 1080 } },
   });
   video.srcObject = flux;
   video.muted = true;

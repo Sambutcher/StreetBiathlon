@@ -4,7 +4,7 @@ import { creerRendu } from './render.js';
 import { creerSuivi } from './tracker.js';
 import { versGris, estimerDecalage } from './flow.js';
 import { nouvelEtat, voirFeu, quitterFeu, tirer, serieEntamee } from './game.js';
-import { cadrage, letterbox, versEcran, plusProcheDe, ronds } from './geometry.js';
+import { cadrage, letterbox, versEcran, plusProcheDe, ronds, zoneDetection, zoneVersSource } from './geometry.js';
 
 const ZOOM = 2;
 const INTERVALLE_DETECTION_MS = 80;
@@ -55,6 +55,8 @@ function lancer(entree) {
   let cible = null;
   let detectionEnCours = false;
   let derniereDetection = 0;
+  let cycleDetection = 0;
+  let zoneAnalysee = null;
   let dernierTir = { resultat: null, t: -Infinity };
   const stats = { images: 0, detections: 0, inferenceMs: 0, fluxMs: 0, flux: { dx: 0, dy: 0 }, debut: 0, texte: [] };
 
@@ -94,16 +96,21 @@ function lancer(entree) {
     stats.fluxMs = performance.now() - t0;
   }
 
-  // Une seule inférence à la fois, sur la même zone que celle affichée. La boîte détectée
-  // décrit l'image du lancement : on la décale du mouvement survenu pendant l'inférence.
+  // Une seule inférence à la fois, sur une zone d'intérêt de l'écran (autour du feu suivi, ou
+  // alternativement vue entière / centre) : les feux lointains y gardent assez de pixels.
+  // La boîte détectée décrit l'image du lancement : on la décale du mouvement survenu depuis.
   function lancerDetection(c, t) {
     detectionEnCours = true;
     derniereDetection = t;
     const cumulDepart = suivi.cumul;
-    const lb = letterbox(c.sw, c.sh, canvasEntree.width, canvasEntree.height);
+    const zone = zoneDetection(suivi.lire(t).cible, rendu.largeur, rendu.hauteur,
+      canvasEntree.width / canvasEntree.height, cycleDetection++);
+    zoneAnalysee = zone;
+    const src = zoneVersSource(zone, c, rendu.largeur, rendu.hauteur);
+    const lb = letterbox(src.sw, src.sh, canvasEntree.width, canvasEntree.height);
     ctxEntree.fillStyle = 'rgb(114,114,114)';
     ctxEntree.fillRect(0, 0, canvasEntree.width, canvasEntree.height);
-    ctxEntree.drawImage(video, c.sx, c.sy, c.sw, c.sh, lb.dx, lb.dy, lb.dw, lb.dh);
+    ctxEntree.drawImage(video, src.sx, src.sy, src.sw, src.sh, lb.dx, lb.dy, lb.dw, lb.dh);
     detecter(canvasEntree)
       .then((boites) => {
         const fin = performance.now();
@@ -111,8 +118,12 @@ function lancer(entree) {
         stats.detections++;
         const cumul = suivi.cumul;
         const ecran = boites.map((b) => {
-          const e = versEcran(b, lb, rendu.largeur, rendu.hauteur);
-          return { ...e, x: e.x + cumul.x - cumulDepart.x, y: e.y + cumul.y - cumulDepart.y };
+          const e = versEcran(b, lb, zone.w, zone.h);
+          return {
+            ...e,
+            x: e.x + zone.x + cumul.x - cumulDepart.x,
+            y: e.y + zone.y + cumul.y - cumulDepart.y,
+          };
         });
         const reference = suivi.lire(fin).cible;
         const centre = reference
@@ -165,7 +176,12 @@ function lancer(entree) {
       stats.debut = t;
     }
     const f = stats.flux;
-    rendu.diagnostic([...stats.texte, `décalage ${f.fiable ? `${f.dx},${f.dy}` : '—'}`]);
+    if (zoneAnalysee) rendu.zone(zoneAnalysee);
+    rendu.diagnostic([
+      ...stats.texte,
+      `décalage ${f.fiable ? `${f.dx},${f.dy}` : '—'}`,
+      `zone ${zoneAnalysee ? zoneAnalysee.type : '—'}`,
+    ]);
   }
 
   requestAnimationFrame(image);

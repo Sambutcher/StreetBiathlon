@@ -19,6 +19,14 @@
     figcaption a { color: #888; }
     #plein { position: fixed; inset: 0; background: #000; display: none; align-items: center; justify-content: center; cursor: zoom-out; }
     #plein img { max-width: 100%; max-height: 100%; }
+    section { margin-top: 32px; }
+    h2 { font-size: 18px; margin: 0 0 4px; }
+    section p { color: #aaa; margin: 0 0 12px; }
+    table { border-collapse: collapse; font-size: 13px; width: 100%; }
+    th, td { padding: 6px 8px; border-bottom: 1px solid #333; text-align: center; }
+    td:first-child, th:first-child { text-align: left; }
+    td.ok { color: #2ecc40; }
+    td.ko { color: #ff6b5b; }
   </style>
   <script src="../vendor/tf.min.js"></script>
 </head>
@@ -32,7 +40,7 @@
 
   <script type="module">
     import { chargerDetecteur, detecter } from '../js/detector.js';
-    import { letterbox, versEcran, ronds } from '../js/geometry.js';
+    import { letterbox, versEcran, ronds, zoneDetection } from '../js/geometry.js';
 
     // Photos Wikimedia Commons (licences libres, voir les liens sous chaque image).
     const IMAGES = [
@@ -141,6 +149,62 @@
       }
     }
     statut.textContent += ` — Détecté sur ${trouves}/${IMAGES.length} images.`;
+
+    // Mode distance : la photo réduite (feu plus lointain) au centre d'un fond gris de même
+    // taille, analysée en vue entière puis sur la zone centrale comme le fait le jeu.
+    const ECHELLES = [1, 0.5, 0.25];
+    const section = document.createElement('section');
+    section.innerHTML = '<h2>Distance</h2><p>Meilleur score « traffic light » (vide = non détecté). '
+      + 'Vue = image entière dans le modèle ; Centre = zone centrale (moitié de la hauteur), comme le jeu.</p>';
+    const tableau = document.createElement('table');
+    tableau.id = 'distance';
+    tableau.innerHTML = `<thead><tr><th>Photo</th>${ECHELLES.map((e) => `<th>${e * 100} % vue</th><th>${e * 100} % centre</th>`).join('')}</tr></thead><tbody></tbody>`;
+    section.append(tableau);
+    document.body.append(section);
+    const vue = document.createElement('canvas');
+    const ctxVue = vue.getContext('2d');
+    const ratio = entree.largeur / entree.hauteur;
+    const totaux = ECHELLES.map(() => ({ vue: 0, centre: 0 }));
+
+    async function meilleurScore(source, z) {
+      const lb = letterbox(z.w, z.h, entree.largeur, entree.hauteur);
+      ctxEntree.fillStyle = 'rgb(114,114,114)';
+      ctxEntree.fillRect(0, 0, entree.largeur, entree.hauteur);
+      ctxEntree.drawImage(source, z.x, z.y, z.w, z.h, lb.dx, lb.dy, lb.dw, lb.dh);
+      const boites = await detecter(canvasEntree);
+      return boites.length ? Math.max(...boites.map((b) => b.score)) : null;
+    }
+
+    for (const [titre, chemin] of IMAGES) {
+      const ligne = document.createElement('tr');
+      ligne.innerHTML = `<td>${titre}</td>`;
+      tableau.tBodies[0].append(ligne);
+      let img;
+      try { img = await charger(miniature(chemin)); } catch { continue; }
+      vue.width = img.naturalWidth;
+      vue.height = img.naturalHeight;
+      for (const [i, e] of ECHELLES.entries()) {
+        ctxVue.fillStyle = 'rgb(128,128,128)';
+        ctxVue.fillRect(0, 0, vue.width, vue.height);
+        const w = vue.width * e;
+        const h = vue.height * e;
+        ctxVue.drawImage(img, (vue.width - w) / 2, (vue.height - h) / 2, w, h);
+        const sVue = await meilleurScore(vue, { x: 0, y: 0, w: vue.width, h: vue.height });
+        const sCentre = await meilleurScore(vue, zoneDetection(null, vue.width, vue.height, ratio, 1));
+        if (sVue !== null) totaux[i].vue++;
+        if (sCentre !== null) totaux[i].centre++;
+        ligne.insertAdjacentHTML('beforeend',
+          `<td class="${sVue !== null ? 'ok' : 'ko'}">${sVue?.toFixed(2) ?? '—'}</td>`
+          + `<td class="${sCentre !== null ? 'ok' : 'ko'}">${sCentre?.toFixed(2) ?? '—'}</td>`);
+      }
+    }
+    const pied = document.createElement('tr');
+    pied.id = 'totaux';
+    pied.innerHTML = `<th>Détectés / ${IMAGES.length}</th>${totaux.map((t) => `<th>${t.vue}</th><th>${t.centre}</th>`).join('')}`;
+    tableau.append(pied);
+    // Résumé lisible dans la console (et par chromium --headless --enable-logging=stderr).
+    console.log(`MIRE vue entière ${trouves}/${IMAGES.length} ; distance ${ECHELLES.map((e, i) => `${e * 100} % : vue ${totaux[i].vue}, centre ${totaux[i].centre}`).join(' | ')}`);
+    for (const l of tableau.tBodies[0].rows) console.log(`MIRE ${[...l.cells].map((c) => c.textContent).join(' ; ')}`);
   </script>
 </body>
 </html>
