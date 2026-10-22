@@ -90,3 +90,13 @@ export function zoneVersSource(zone, c, ecranW, ecranH) {
   const ky = c.sh / ecranH;
   return { sx: c.sx + zone.x * kx, sy: c.sy + zone.y * ky, sw: zone.w * kx, sh: zone.h * ky };
 }
+
+// Plaque blanche de la cible : la boîte du feu agrandie d'une marge.
+export function plaque(boite) {
+  const marge = boite.w * 0.15;
+  return { x: boite.x - marge, y: boite.y - marge, w: boite.w + 2 * marge, h: boite.h + 2 * marge };
+}
+
+export function dansRect(point, r) {
+  return point.x >= r.x && point.x <= r.x + r.w && point.y >= r.y && point.y <= r.y + r.h;
+}

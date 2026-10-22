@@ -1,10 +1,9 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { nouvelEtat, voirFeu, quitterFeu, tirer, serieEntamee, CARTOUCHES } from '../js/game.js';
-import { ronds } from '../js/geometry.js';
 import { creerSuivi } from '../js/tracker.js';
 
-const cible = ronds({ x: 0, y: 0, w: 30, h: 90 });
+const cible = { x: 0, y: 0, w: 30, h: 90 }; // boîte du feu ; plaque = marge de 4,5 autour
 const haut = { x: 15, y: 15 };
 const ailleurs = { x: 200, y: 200 };
 
@@ -112,4 +111,27 @@ test('suivi : un saut lointain exige 2 confirmations', () => {
   assert.equal(s.lire(200).cible.x, 100, 'faux positif isolé ignoré');
   s.maj({ x: 302, y: 100, w: 20, h: 60 }, 300);
   assert.equal(s.lire(300).cible.x, 302, 'saut confirmé');
+});
+
+test('raté sur la plaque : un éclat en coordonnées relatives', () => {
+  // Plaque : x -4,5 → 34,5 (w 39), y -4,5 → 94,5 (h 99). Entre deux ronds, sur le blanc.
+  const { etat, resultat } = tirer(voirFeu(nouvelEtat()), cible, { x: 15, y: 30 });
+  assert.equal(resultat, 'rate');
+  assert.equal(etat.impacts.length, 1);
+  assert.ok(Math.abs(etat.impacts[0].u - 19.5 / 39) < 1e-9);
+  assert.ok(Math.abs(etat.impacts[0].v - 34.5 / 99) < 1e-9);
+});
+
+test('raté hors plaque ou touché : pas d\'éclat', () => {
+  assert.deepEqual(tirer(voirFeu(nouvelEtat()), cible, ailleurs).etat.impacts, []);
+  assert.deepEqual(tirer(voirFeu(nouvelEtat()), cible, haut).etat.impacts, []);
+});
+
+test('éclats conservés à la perte du feu, effacés au rechargement', () => {
+  let etat = tirer(voirFeu(nouvelEtat()), cible, { x: 15, y: 30 }).etat;
+  etat = voirFeu(quitterFeu(etat));
+  assert.equal(etat.impacts.length, 1);
+  etat = tirer(etat, cible, ailleurs).etat;
+  etat = tirer(etat, cible, ailleurs).etat;
+  assert.deepEqual(quitterFeu(etat).impacts, []);
 });

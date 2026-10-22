@@ -64,7 +64,7 @@ function lancer(entree) {
     ev.preventDefault();
     if (!cible) return;
     const centre = { x: rendu.largeur / 2, y: rendu.hauteur / 2 };
-    const r = tirer(etat, ronds(cible), centre);
+    const r = tirer(etat, cible, centre);
     etat = r.etat;
     if (r.resultat) dernierTir = { resultat: r.resultat, t: performance.now() };
   });
@@ -147,7 +147,7 @@ function lancer(entree) {
 
     rendu.video(video, c);
     if (cible) {
-      rendu.cible(cible, ronds(cible), etat.touches);
+      rendu.cible(cible, ronds(cible), etat.touches, etat.impacts);
       rendu.viseur();
     }
     if (cible || serieEntamee(etat)) rendu.cartouches(etat.cartouches);

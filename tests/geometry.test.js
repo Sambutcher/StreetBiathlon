@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { cadrage, letterbox, versEcran, plusProcheDe, ronds, rondVise, zoneDetection, zoneVersSource } from '../js/geometry.js';
+import { cadrage, letterbox, versEcran, plusProcheDe, ronds, rondVise, zoneDetection, zoneVersSource, plaque, dansRect } from '../js/geometry.js';
 
 test('cadrage couvre l\'écran puis zoome au centre', () => {
   // Vidéo portrait 720×1280 sur écran 375×667 : même ratio ≈, zoom 2 → moitié centrale.
@@ -75,4 +75,13 @@ test('aller-retour zone écran → vidéo → entrée modèle → écran', () =>
   for (const [a, b] of [[e.x, 0], [e.y, 0], [e.w, zone.w], [e.h, zone.h]]) assert.ok(Math.abs(a - b) < 1e-9);
   // Source à l'intérieur du cadrage vidéo.
   assert.ok(src.sx >= c.sx - 1e-9 && src.sx + src.sw <= c.sx + c.sw + 1e-9);
+});
+
+test('plaque et dansRect', () => {
+  const p = plaque({ x: 10, y: 20, w: 20, h: 60 });
+  assert.deepEqual(p, { x: 7, y: 17, w: 26, h: 66 });
+  assert.ok(dansRect({ x: 7, y: 17 }, p));
+  assert.ok(dansRect({ x: 20, y: 50 }, p));
+  assert.ok(!dansRect({ x: 33.5, y: 50 }, p));
+  assert.ok(!dansRect({ x: 20, y: 16 }, p));
 });
