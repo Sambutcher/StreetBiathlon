@@ -17,7 +17,9 @@ command -v yolo >/dev/null || pipx install "ultralytics<8.4" \
   --pip-args="--index-url https://download.pytorch.org/whl/cpu --extra-index-url https://pypi.org/simple"
 
 cd "$TRAVAIL"
-yolo export model=yolo11n.pt format=tfjs imgsz="$HAUTEUR,$LARGEUR"
+# Le premier essai installe TensorFlow & co. mais échoue tant que Python n'est pas relancé.
+yolo export model=yolo11n.pt format=tfjs imgsz="$HAUTEUR,$LARGEUR" \
+  || yolo export model=yolo11n.pt format=tfjs imgsz="$HAUTEUR,$LARGEUR"
 
 rm -rf "$RACINE/models/yolo11n"
 mkdir -p "$RACINE/models"
