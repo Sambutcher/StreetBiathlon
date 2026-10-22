@@ -1,5 +1,5 @@
-// Course entre deux tirs : il faut s'éloigner de `distance` mètres (à vol d'oiseau) du point
-// de départ pour débloquer le tir. Pur, sans dépendance au navigateur.
+// Course entre deux tirs : il faut être à plus de `distance` mètres (à vol d'oiseau) du point
+// de départ pour débloquer le tir ; revenir en deçà le rebloque. Pur, sans dépendance au navigateur.
 // Une position (fix) : { lat, lon, precision (m), t (ms) }.
 
 const RAYON_TERRE = 6371000;
@@ -20,22 +20,20 @@ export function creerCourse({ distance = 100, precisionMax = 30, memoireMs = 100
   let depart = null;
   let parcourue = 0;
   let loin = 0; // positions consécutives au-delà de la distance
-  let fini = false;
 
   return {
     ajouter(fix) {
       derniere = fix;
       if (fix.precision > precisionMax) return;
       recentes = [...recentes.filter((f) => fix.t - f.t <= memoireMs), fix];
-      if (!lancee || fini) return;
+      if (!lancee) return;
       if (!depart) {
         depart = fix;
         return;
       }
       parcourue = distanceM(depart, fix);
-      loin = parcourue >= distance ? loin + 1 : 0;
       // Une position aberrante isolée ne suffit pas : il en faut plusieurs de suite.
-      if (loin >= confirmations) fini = true;
+      loin = parcourue >= distance ? loin + 1 : 0;
     },
 
     // Nouveau départ : la meilleure position récente, sinon la prochaine position précise.
@@ -47,11 +45,10 @@ export function creerCourse({ distance = 100, precisionMax = 30, memoireMs = 100
       lancee = true;
       parcourue = 0;
       loin = 0;
-      fini = false;
     },
 
     etat() {
-      const phase = !lancee ? 'arret' : !depart ? 'gps' : fini ? 'fini' : 'course';
+      const phase = !lancee ? 'arret' : !depart ? 'gps' : loin >= confirmations ? 'fini' : 'course';
       return { phase, distance: parcourue, objectif: distance, precision: derniere ? derniere.precision : null };
     },
   };

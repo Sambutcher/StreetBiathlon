@@ -193,50 +193,41 @@ export function creerRendu(canvas) {
     ctx.restore();
   }
 
-  // Écran de course (caméra éteinte) : distance à vol d'oiseau depuis le départ et progression.
-  // e = course.etat() ; titre et message selon l'étape de la partie.
-  function course(e, { titre, message: texte, detail }) {
+  // Écran de course (caméra éteinte) : distance à vol d'oiseau depuis le départ (sans plafond)
+  // et barre qui se remplit jusqu'à l'objectif, verte quand le tir est débloqué.
+  // e = course.etat() ; alerte : message exceptionnel (localisation refusée…), sinon null.
+  function course(e, alerte) {
     ctx.save();
     ctx.fillStyle = '#000';
     ctx.fillRect(0, 0, largeur, hauteur);
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     const cx = largeur / 2;
-    const fini = e.phase === 'fini';
+    const debloque = e.phase === 'fini';
 
-    ctx.fillStyle = '#bbb';
-    ctx.font = '600 20px -apple-system, system-ui, sans-serif';
-    ctx.fillText(titre, cx, margeHaut + hauteur * 0.16);
+    const enCourse = e.phase === 'course' || debloque;
+    ctx.fillStyle = debloque ? '#2ecc40' : '#fff';
+    ctx.font = '700 96px -apple-system, system-ui, sans-serif';
+    ctx.fillText(enCourse ? `${Math.floor(e.distance)} m` : '— m', cx, hauteur * 0.4);
 
-    const metres = Math.min(Math.floor(e.distance), e.objectif);
-    ctx.fillStyle = fini ? '#2ecc40' : '#fff';
-    ctx.font = '700 88px -apple-system, system-ui, sans-serif';
-    ctx.fillText(e.phase === 'gps' || e.phase === 'arret' ? '—' : `${metres} m`, cx, hauteur * 0.36);
-    ctx.fillStyle = '#888';
-    ctx.font = '500 18px -apple-system, system-ui, sans-serif';
-    ctx.fillText(`sur ${e.objectif} m`, cx, hauteur * 0.36 + 58);
-
-    // Barre de progression
-    const bw = Math.min(largeur - 64, 360);
+    const bw = Math.min(largeur - 75, 300);
+    const bh = 16;
     const bx = cx - bw / 2;
-    const by = hauteur * 0.52;
+    const by = hauteur * 0.56;
     ctx.fillStyle = '#222';
-    rectArrondi(bx, by, bw, 14, 7);
+    rectArrondi(bx, by, bw, bh, bh / 2);
     ctx.fill();
-    const part = Math.min(1, e.distance / e.objectif);
+    const part = enCourse ? Math.min(1, e.distance / e.objectif) : 0;
     if (part > 0) {
-      ctx.fillStyle = fini ? '#2ecc40' : '#d4a017';
-      rectArrondi(bx, by, Math.max(14, bw * part), 14, 7);
+      ctx.fillStyle = debloque ? '#2ecc40' : '#d4a017';
+      rectArrondi(bx, by, Math.max(bh, bw * part), bh, bh / 2);
       ctx.fill();
     }
 
-    ctx.fillStyle = fini ? '#2ecc40' : '#fff';
-    ctx.font = '600 18px -apple-system, system-ui, sans-serif';
-    ctx.fillText(texte, cx, by + 52);
-    if (detail) {
-      ctx.fillStyle = '#777';
-      ctx.font = '14px -apple-system, system-ui, sans-serif';
-      ctx.fillText(detail, cx, by + 80);
+    if (alerte) {
+      ctx.fillStyle = '#ff6b5b';
+      ctx.font = '600 16px -apple-system, system-ui, sans-serif';
+      ctx.fillText(alerte, cx, by + 48);
     }
     ctx.restore();
   }

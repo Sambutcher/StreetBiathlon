@@ -14,7 +14,8 @@ PWA installable, jouable **hors ligne**, pensée d'abord pour iPhone (testée su
 Une partie alterne **course** et **tir** :
 - **Course** (caméra éteinte pour la batterie) : s'éloigner de **100 m à vol d'oiseau** du point de
   départ, mesuré au GPS. Garder l'écran allumé (iOS coupe le GPS écran verrouillé).
-- À 100 m, le bouton **Position de tir** s'active : il rallume la caméra et charge 3 cartouches.
+- Au-delà de 100 m, le bouton **Position de tir** s'active (il se regrise si l'on revient en deçà) :
+  il rallume la caméra et charge 3 cartouches. L'écran de course n'affiche que la distance et une barre.
   La première course mène au pas de tir (prise de la carabine).
 - **Tir** : visez un feu, croix au centre, un tap = un tir. Après la 3ᵉ balle, nouvelle course.
 

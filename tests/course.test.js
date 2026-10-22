@@ -61,8 +61,14 @@ test('99 m ne suffisent pas, une position isolée à 120 m non plus, deux de sui
   assert.equal(c.etat().phase, 'course');
   c.ajouter(fix(103, 5000));
   assert.equal(c.etat().phase, 'fini');
-  c.ajouter(fix(0, 6000));
-  assert.equal(c.etat().phase, 'fini', 'reste débloqué même si on revient');
+  assert.ok(c.etat().distance > 100, 'distance non plafonnée');
+  c.ajouter(fix(85, 6000));
+  assert.equal(c.etat().phase, 'course', 'revenir sous 100 m rebloque le tir');
+  assert.ok(Math.abs(c.etat().distance - 85) < 0.5);
+  c.ajouter(fix(105, 7000));
+  assert.equal(c.etat().phase, 'course', 'il faut de nouveau deux positions au-delà');
+  c.ajouter(fix(106, 8000));
+  assert.equal(c.etat().phase, 'fini');
 });
 
 test('positions imprécises ignorées pendant la course', () => {

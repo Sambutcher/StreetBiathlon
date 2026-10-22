@@ -71,7 +71,6 @@ function lancer(entree) {
   // Course : GPS actif toute la partie, caméra éteinte ; le tir se débloque à 100 m du départ.
   const course = creerCourse({ distance: DISTANCE_COURSE });
   let erreurGps = null;
-  let premiereCourse = true;
   let allumageCamera = false;
   suivrePosition(
     (fix) => { erreurGps = null; course.ajouter(fix); },
@@ -101,7 +100,6 @@ function lancer(entree) {
     cible = null;
     zoneAnalysee = null;
     etat = debloquerTir(etat);
-    premiereCourse = false;
     pasDeTir.hidden = true;
   });
 
@@ -236,17 +234,14 @@ function lancer(entree) {
   function imageCourse() {
     const e = course.etat();
     boutonTir.disabled = e.phase !== 'fini' || allumageCamera;
-    let texte;
-    if (e.phase === 'fini') texte = `${e.objectif} m atteints : prenez position !`;
-    else if (erreurGps) texte = erreurGps;
-    else if (e.phase === 'gps') texte = 'Recherche du GPS…';
-    else texte = `Éloignez-vous de ${e.objectif} m à vol d'oiseau`;
-    const precision = e.precision !== null ? `GPS ±${Math.round(e.precision)} m` : '';
-    rendu.course(e, {
-      titre: premiereCourse ? 'Rejoignez le pas de tir' : 'Course de recharge',
-      message: texte,
-      detail: [precision, SIMGPS ? 'simulation' : ''].filter(Boolean).join(' · '),
-    });
+    rendu.course(e, erreurGps && erreurGps !== 'Recherche du GPS…' ? erreurGps : null);
+    if (DEBUG) {
+      rendu.diagnostic([
+        `phase ${e.phase}`,
+        `GPS ±${e.precision === null ? '—' : Math.round(e.precision)} m`,
+        SIMGPS ? 'simulation' : 'GPS réel',
+      ]);
+    }
   }
 
   function diagnostic(t) {
