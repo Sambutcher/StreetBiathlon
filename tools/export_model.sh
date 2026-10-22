@@ -17,9 +17,14 @@ command -v yolo >/dev/null || pipx install "ultralytics<8.4" \
   --pip-args="--index-url https://download.pytorch.org/whl/cpu --extra-index-url https://pypi.org/simple"
 
 cd "$TRAVAIL"
-# Le premier essai installe TensorFlow & co. mais échoue tant que Python n'est pas relancé.
-yolo export model=yolo11n.pt format=tfjs imgsz="$HAUTEUR,$LARGEUR" \
-  || yolo export model=yolo11n.pt format=tfjs imgsz="$HAUTEUR,$LARGEUR"
+# ultralytics installe ses dépendances au fil de l'export (TensorFlow, puis tensorflowjs) et
+# échoue tant que Python n'est pas relancé : on réessaie. tensorflow-decision-forests, tiré par
+# tensorflowjs mais inutile ici, casse protobuf : on le retire entre deux essais.
+for essai in 1 2 3; do
+  yolo export model=yolo11n.pt format=tfjs imgsz="$HAUTEUR,$LARGEUR" && break
+  [ "$essai" = 3 ] && exit 1
+  python3 -m pip uninstall -y tensorflow-decision-forests >/dev/null 2>&1 || true
+done
 
 rm -rf "$RACINE/models/yolo11n"
 mkdir -p "$RACINE/models"
