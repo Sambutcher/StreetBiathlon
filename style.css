@@ -73,3 +73,43 @@ h1 {
   min-height: 1.4em;
   font-size: 14px;
 }
+
+#pas-de-tir {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 16px 16px max(24px, env(safe-area-inset-bottom));
+}
+
+#pas-de-tir[hidden] {
+  display: none;
+}
+
+#position-tir {
+  width: 100%;
+  max-width: 420px;
+  padding: 20px;
+  border: 0;
+  border-radius: 16px;
+  background: #2ecc40;
+  color: #000;
+  font: 700 22px -apple-system, system-ui, sans-serif;
+}
+
+#position-tir:disabled {
+  background: #333;
+  color: #777;
+}
+
+#erreur-camera {
+  margin: 0;
+  min-height: 1.2em;
+  color: #ff6b5b;
+  font-size: 14px;
+  text-align: center;
+}

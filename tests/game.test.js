@@ -1,20 +1,36 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { nouvelEtat, voirFeu, quitterFeu, tirer, serieEntamee, CARTOUCHES } from '../js/game.js';
+import { nouvelEtat, debloquerTir, finSerie, serieTerminee, voirFeu, quitterFeu, tirer, serieEntamee, CARTOUCHES } from '../js/game.js';
 import { creerSuivi } from '../js/tracker.js';
 
 const cible = { x: 0, y: 0, w: 30, h: 90 }; // boîte du feu ; plaque = marge de 4,5 autour
 const haut = { x: 15, y: 15 };
 const ailleurs = { x: 200, y: 200 };
+const enPosition = () => debloquerTir(nouvelEtat());
+
+test('la partie commence par la course, sans balles', () => {
+  const etat = nouvelEtat();
+  assert.equal(etat.phase, 'course');
+  assert.equal(etat.cartouches, 0);
+  assert.equal(tirer(voirFeu(etat), cible, haut).resultat, null, 'pas de tir pendant la course');
+});
+
+test('position de tir : 3 cartouches et cible vierge', () => {
+  const etat = enPosition();
+  assert.equal(etat.phase, 'tir');
+  assert.equal(etat.cartouches, CARTOUCHES);
+  assert.deepEqual(etat.touches, [false, false, false]);
+  assert.deepEqual(etat.impacts, []);
+});
 
 test('pas de tir sans feu visible', () => {
-  const { etat, resultat } = tirer(nouvelEtat(), cible, haut);
+  const { etat, resultat } = tirer(enPosition(), cible, haut);
   assert.equal(resultat, null);
   assert.equal(etat.cartouches, CARTOUCHES);
 });
 
 test('touché blanchit le rond et consomme une cartouche', () => {
-  const { etat, resultat } = tirer(voirFeu(nouvelEtat()), cible, haut);
+  const { etat, resultat } = tirer(voirFeu(enPosition()), cible, haut);
   assert.equal(resultat, 'touche');
   assert.deepEqual(etat.touches, [true, false, false]);
   assert.equal(etat.cartouches, 2);
@@ -22,28 +38,28 @@ test('touché blanchit le rond et consomme une cartouche', () => {
 });
 
 test('raté consomme une cartouche sans blanchir', () => {
-  const { etat, resultat } = tirer(voirFeu(nouvelEtat()), cible, ailleurs);
+  const { etat, resultat } = tirer(voirFeu(enPosition()), cible, ailleurs);
   assert.equal(resultat, 'rate');
   assert.deepEqual(etat.touches, [false, false, false]);
   assert.equal(etat.cartouches, 2);
 });
 
 test('un rond déjà blanchi compte comme raté', () => {
-  const etat = tirer(voirFeu(nouvelEtat()), cible, haut).etat;
+  const etat = tirer(voirFeu(enPosition()), cible, haut).etat;
   const r = tirer(etat, cible, haut);
   assert.equal(r.resultat, 'rate');
   assert.deepEqual(r.etat.touches, [true, false, false]);
 });
 
 test('3 cartouches maximum', () => {
-  let etat = voirFeu(nouvelEtat());
+  let etat = voirFeu(enPosition());
   for (let i = 0; i < 3; i++) etat = tirer(etat, cible, ailleurs).etat;
   assert.equal(etat.cartouches, 0);
   assert.equal(tirer(etat, cible, haut).resultat, null);
 });
 
 test('la série survit à la perte du feu tant qu\'il reste des balles', () => {
-  let etat = tirer(voirFeu(nouvelEtat()), cible, haut).etat;
+  let etat = tirer(voirFeu(enPosition()), cible, haut).etat;
   etat = quitterFeu(etat);
   assert.equal(etat.cibleVisible, false);
   assert.equal(etat.cartouches, 2);
@@ -53,12 +69,19 @@ test('la série survit à la perte du feu tant qu\'il reste des balles', () => {
   assert.deepEqual(etat.touches, [true, false, false], 'ronds conservés au retour');
 });
 
-test('rechargement : 3 balles tirées puis feu quitté', () => {
-  let etat = voirFeu(nouvelEtat());
+test('3 balles tirées : fin de série, retour à la course ; quitter le feu ne recharge plus', () => {
+  let etat = voirFeu(enPosition());
+  assert.ok(!serieTerminee(etat));
   for (let i = 0; i < 3; i++) etat = tirer(etat, cible, haut).etat;
+  assert.ok(serieTerminee(etat));
+  assert.equal(quitterFeu(etat).cartouches, 0, 'pas de rechargement en quittant le feu');
+  etat = finSerie(etat);
+  assert.equal(etat.phase, 'course');
   assert.equal(etat.cartouches, 0);
-  assert.deepEqual(voirFeu(etat), etat, 'pas de rechargement tant que le feu est visible');
-  assert.deepEqual(quitterFeu(etat), nouvelEtat());
+  assert.ok(!serieTerminee(etat));
+  etat = debloquerTir(etat);
+  assert.equal(etat.cartouches, CARTOUCHES);
+  assert.deepEqual(etat.touches, [false, false, false], 'cible vierge après la course');
 });
 
 test('suivi : confirmation, position amortie ou recalée, oubli après persistance', () => {
@@ -115,7 +138,7 @@ test('suivi : un saut lointain exige 2 confirmations', () => {
 
 test('raté sur la plaque : un éclat en coordonnées relatives', () => {
   // Plaque : x -4,5 → 34,5 (w 39), y -4,5 → 94,5 (h 99). Entre deux ronds, sur le blanc.
-  const { etat, resultat } = tirer(voirFeu(nouvelEtat()), cible, { x: 15, y: 30 });
+  const { etat, resultat } = tirer(voirFeu(enPosition()), cible, { x: 15, y: 30 });
   assert.equal(resultat, 'rate');
   assert.equal(etat.impacts.length, 1);
   assert.ok(Math.abs(etat.impacts[0].u - 19.5 / 39) < 1e-9);
@@ -123,15 +146,15 @@ test('raté sur la plaque : un éclat en coordonnées relatives', () => {
 });
 
 test('raté hors plaque ou touché : pas d\'éclat', () => {
-  assert.deepEqual(tirer(voirFeu(nouvelEtat()), cible, ailleurs).etat.impacts, []);
-  assert.deepEqual(tirer(voirFeu(nouvelEtat()), cible, haut).etat.impacts, []);
+  assert.deepEqual(tirer(voirFeu(enPosition()), cible, ailleurs).etat.impacts, []);
+  assert.deepEqual(tirer(voirFeu(enPosition()), cible, haut).etat.impacts, []);
 });
 
 test('éclats conservés à la perte du feu, effacés au rechargement', () => {
-  let etat = tirer(voirFeu(nouvelEtat()), cible, { x: 15, y: 30 }).etat;
+  let etat = tirer(voirFeu(enPosition()), cible, { x: 15, y: 30 }).etat;
   etat = voirFeu(quitterFeu(etat));
   assert.equal(etat.impacts.length, 1);
   etat = tirer(etat, cible, ailleurs).etat;
   etat = tirer(etat, cible, ailleurs).etat;
-  assert.deepEqual(quitterFeu(etat).impacts, []);
+  assert.deepEqual(debloquerTir(finSerie(etat)).impacts, []);
 });

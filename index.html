@@ -19,9 +19,14 @@
 <body>
   <video id="video" playsinline muted></video>
   <canvas id="jeu"></canvas>
+  <div id="pas-de-tir" hidden>
+    <p id="erreur-camera"></p>
+    <button id="position-tir" type="button" disabled>Position de tir</button>
+  </div>
   <div id="accueil">
     <h1>Street Biathlon</h1>
-    <p>Visez les feux tricolores, blanchissez les 3 cibles.</p>
+    <p>Courez 100 m jusqu'au pas de tir, visez les feux tricolores, blanchissez les 3 cibles.
+      Après chaque série, 100 m de course pour recharger.</p>
     <button id="demarrer" type="button">Démarrer</button>
     <p id="statut"></p>
   </div>

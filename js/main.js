@@ -1,9 +1,11 @@
-import { demarrerCamera } from './camera.js';
+import { demarrerCamera, arreterCamera } from './camera.js';
+import { suivrePosition, garderEcranAllume } from './position.js';
+import { creerCourse } from './course.js';
 import { chargerDetecteur, detecter } from './detector.js';
 import { creerRendu } from './render.js';
 import { creerSuivi } from './tracker.js';
 import { versGris, estimerDecalage } from './flow.js';
-import { nouvelEtat, voirFeu, quitterFeu, tirer, serieEntamee } from './game.js';
+import { nouvelEtat, debloquerTir, finSerie, serieTerminee, voirFeu, quitterFeu, tirer, serieEntamee } from './game.js';
 import { cadrage, letterbox, versEcran, plusProcheDe, ronds, zoneDetection, zoneVersSource } from './geometry.js';
 
 const ZOOM = 2;
@@ -12,13 +14,20 @@ const DUREE_FLASH_MS = 250;
 const LARGEUR_FLUX = 120; // largeur de l'image réduite pour le flux optique
 const RAYON_FLUX = 12; // déplacement max mesuré par trame, en pixels de l'image réduite
 const URL_MODELE = 'models/yolo11n/model.json';
-const DEBUG = new URLSearchParams(location.search).has('debug');
+const DISTANCE_COURSE = 100; // mètres à vol d'oiseau pour (re)débloquer le tir
+const DELAI_FIN_SERIE_MS = 1500; // la cible reste visible après la 3e balle
+const PARAMS = new URLSearchParams(location.search);
+const DEBUG = PARAMS.has('debug');
+const SIMGPS = PARAMS.has('simgps'); // course simulée, pour tester sans courir
 
 const accueil = document.getElementById('accueil');
 const bouton = document.getElementById('demarrer');
 const statut = document.getElementById('statut');
 const video = document.getElementById('video');
 const canvas = document.getElementById('jeu');
+const pasDeTir = document.getElementById('pas-de-tir');
+const boutonTir = document.getElementById('position-tir');
+const erreurCamera = document.getElementById('erreur-camera');
 
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('sw.js').catch((e) => console.warn('Service worker :', e));
@@ -27,8 +36,7 @@ if ('serviceWorker' in navigator) {
 bouton.addEventListener('click', async () => {
   bouton.disabled = true;
   try {
-    statut.textContent = 'Ouverture de la caméra…';
-    await demarrerCamera(video);
+    garderEcranAllume();
     statut.textContent = 'Chargement du détecteur…';
     const entree = await chargerDetecteur(URL_MODELE);
     accueil.hidden = true;
@@ -42,7 +50,7 @@ bouton.addEventListener('click', async () => {
 
 function lancer(entree) {
   const rendu = creerRendu(canvas);
-  const suivi = creerSuivi();
+  let suivi = creerSuivi();
   const canvasEntree = document.createElement('canvas');
   canvasEntree.width = entree.largeur;
   canvasEntree.height = entree.hauteur;
@@ -58,6 +66,55 @@ function lancer(entree) {
   let cycleDetection = 0;
   let zoneAnalysee = null;
   let dernierTir = { resultat: null, t: -Infinity };
+  let finSerieA = null; // instant de la 3e balle
+
+  // Course : GPS actif toute la partie, caméra éteinte ; le tir se débloque à 100 m du départ.
+  const course = creerCourse({ distance: DISTANCE_COURSE });
+  let erreurGps = null;
+  let premiereCourse = true;
+  let allumageCamera = false;
+  suivrePosition(
+    (fix) => { erreurGps = null; course.ajouter(fix); },
+    (message) => { erreurGps = message; },
+    { simulation: SIMGPS },
+  );
+  course.demarrer(Date.now());
+  pasDeTir.hidden = false;
+
+  // « Position de tir » : rallume la caméra (geste utilisateur, exigé par iOS) et charge la carabine.
+  boutonTir.addEventListener('click', async () => {
+    if (course.etat().phase !== 'fini' || allumageCamera) return;
+    allumageCamera = true;
+    boutonTir.disabled = true;
+    erreurCamera.textContent = '';
+    try {
+      await demarrerCamera(video);
+    } catch (e) {
+      console.error(e);
+      erreurCamera.textContent = `Caméra indisponible : ${e.message || e}`;
+      allumageCamera = false;
+      return;
+    }
+    allumageCamera = false;
+    suivi = creerSuivi();
+    grisPrec = null;
+    cible = null;
+    zoneAnalysee = null;
+    etat = debloquerTir(etat);
+    premiereCourse = false;
+    pasDeTir.hidden = true;
+  });
+
+  // Série terminée : caméra coupée, nouvelle course depuis la position actuelle.
+  function passerEnCourse() {
+    arreterCamera(video);
+    etat = finSerie(etat);
+    cible = null;
+    finSerieA = null;
+    course.demarrer(Date.now());
+    erreurCamera.textContent = '';
+    pasDeTir.hidden = false;
+  }
   const stats = { images: 0, detections: 0, inferenceMs: 0, fluxMs: 0, flux: { dx: 0, dy: 0 }, debut: 0, texte: [] };
 
   canvas.addEventListener('pointerdown', (ev) => {
@@ -67,6 +124,7 @@ function lancer(entree) {
     const r = tirer(etat, cible, centre);
     etat = r.etat;
     if (r.resultat) dernierTir = { resultat: r.resultat, t: performance.now() };
+    if (serieTerminee(etat) && finSerieA === null) finSerieA = performance.now();
   });
 
   // Flux optique : déplacement de l'image depuis la trame précédente, appliqué à la cible.
@@ -136,6 +194,20 @@ function lancer(entree) {
   }
 
   function image(t) {
+    if (etat.phase === 'course') {
+      imageCourse();
+      requestAnimationFrame(image);
+      return;
+    }
+    if (finSerieA !== null && t - finSerieA > DELAI_FIN_SERIE_MS) {
+      passerEnCourse();
+      requestAnimationFrame(image);
+      return;
+    }
+    if (!video.videoWidth) { // caméra pas encore prête
+      requestAnimationFrame(image);
+      return;
+    }
     const c = cadrage(video.videoWidth, video.videoHeight, rendu.largeur, rendu.hauteur, ZOOM);
     suivreImage(c);
     if (!detectionEnCours && t - derniereDetection >= INTERVALLE_DETECTION_MS) lancerDetection(c, t);
@@ -152,13 +224,29 @@ function lancer(entree) {
     }
     if (cible || serieEntamee(etat)) rendu.cartouches(etat.cartouches);
     if (cible && etat.cartouches === 0) rendu.message('Plus de cartouches');
-    else if (!cible) rendu.message(serieEntamee(etat) ? 'Retrouvez le feu…' : 'Cherchez un feu…');
+    else if (!cible && !serieTerminee(etat)) rendu.message(serieEntamee(etat) ? 'Retrouvez le feu…' : 'Cherchez un feu…');
 
     const age = t - dernierTir.t;
     if (age < DUREE_FLASH_MS) rendu.flash(dernierTir.resultat, 1 - age / DUREE_FLASH_MS);
     if (DEBUG) diagnostic(t);
 
     requestAnimationFrame(image);
+  }
+
+  function imageCourse() {
+    const e = course.etat();
+    boutonTir.disabled = e.phase !== 'fini' || allumageCamera;
+    let texte;
+    if (e.phase === 'fini') texte = `${e.objectif} m atteints : prenez position !`;
+    else if (erreurGps) texte = erreurGps;
+    else if (e.phase === 'gps') texte = 'Recherche du GPS…';
+    else texte = `Éloignez-vous de ${e.objectif} m à vol d'oiseau`;
+    const precision = e.precision !== null ? `GPS ±${Math.round(e.precision)} m` : '';
+    rendu.course(e, {
+      titre: premiereCourse ? 'Rejoignez le pas de tir' : 'Course de recharge',
+      message: texte,
+      detail: [precision, SIMGPS ? 'simulation' : ''].filter(Boolean).join(' · '),
+    });
   }
 
   function diagnostic(t) {

@@ -193,6 +193,54 @@ export function creerRendu(canvas) {
     ctx.restore();
   }
 
+  // Écran de course (caméra éteinte) : distance à vol d'oiseau depuis le départ et progression.
+  // e = course.etat() ; titre et message selon l'étape de la partie.
+  function course(e, { titre, message: texte, detail }) {
+    ctx.save();
+    ctx.fillStyle = '#000';
+    ctx.fillRect(0, 0, largeur, hauteur);
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    const cx = largeur / 2;
+    const fini = e.phase === 'fini';
+
+    ctx.fillStyle = '#bbb';
+    ctx.font = '600 20px -apple-system, system-ui, sans-serif';
+    ctx.fillText(titre, cx, margeHaut + hauteur * 0.16);
+
+    const metres = Math.min(Math.floor(e.distance), e.objectif);
+    ctx.fillStyle = fini ? '#2ecc40' : '#fff';
+    ctx.font = '700 88px -apple-system, system-ui, sans-serif';
+    ctx.fillText(e.phase === 'gps' || e.phase === 'arret' ? '—' : `${metres} m`, cx, hauteur * 0.36);
+    ctx.fillStyle = '#888';
+    ctx.font = '500 18px -apple-system, system-ui, sans-serif';
+    ctx.fillText(`sur ${e.objectif} m`, cx, hauteur * 0.36 + 58);
+
+    // Barre de progression
+    const bw = Math.min(largeur - 64, 360);
+    const bx = cx - bw / 2;
+    const by = hauteur * 0.52;
+    ctx.fillStyle = '#222';
+    rectArrondi(bx, by, bw, 14, 7);
+    ctx.fill();
+    const part = Math.min(1, e.distance / e.objectif);
+    if (part > 0) {
+      ctx.fillStyle = fini ? '#2ecc40' : '#d4a017';
+      rectArrondi(bx, by, Math.max(14, bw * part), 14, 7);
+      ctx.fill();
+    }
+
+    ctx.fillStyle = fini ? '#2ecc40' : '#fff';
+    ctx.font = '600 18px -apple-system, system-ui, sans-serif';
+    ctx.fillText(texte, cx, by + 52);
+    if (detail) {
+      ctx.fillStyle = '#777';
+      ctx.font = '14px -apple-system, system-ui, sans-serif';
+      ctx.fillText(detail, cx, by + 80);
+    }
+    ctx.restore();
+  }
+
   // Cadre de la zone analysée par le modèle (mode debug).
   function zone(z) {
     ctx.save();
@@ -218,6 +266,6 @@ export function creerRendu(canvas) {
   return {
     get largeur() { return largeur; },
     get hauteur() { return hauteur; },
-    video, cible, viseur, cartouches, message, flash, zone, diagnostic,
+    video, cible, viseur, cartouches, message, flash, course, zone, diagnostic,
   };
 }

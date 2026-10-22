@@ -1,4 +1,4 @@
-// Caméra arrière dans un <video> caché.
+// Caméra arrière dans un <video> caché, éteinte pendant les courses pour la batterie.
 
 export async function demarrerCamera(video) {
   const flux = await navigator.mediaDevices.getUserMedia({
@@ -10,4 +10,9 @@ export async function demarrerCamera(video) {
   video.playsInline = true;
   await video.play();
   return video;
+}
+
+export function arreterCamera(video) {
+  if (video.srcObject) video.srcObject.getTracks().forEach((piste) => piste.stop());
+  video.srcObject = null;
 }
