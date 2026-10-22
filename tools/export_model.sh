@@ -19,11 +19,15 @@ command -v yolo >/dev/null || pipx install "ultralytics<8.4" \
 cd "$TRAVAIL"
 # ultralytics installe ses dépendances au fil de l'export (TensorFlow, puis tensorflowjs) et
 # échoue tant que Python n'est pas relancé : on réessaie. tensorflow-decision-forests, tiré par
-# tensorflowjs mais inutile ici, casse protobuf : on le retire entre deux essais.
+# tensorflowjs, casse protobuf ; tensorflowjs 4.22 ne fait que l'importer sans s'en servir :
+# on le remplace par un module vide entre deux essais.
 for essai in 1 2 3; do
   yolo export model=yolo11n.pt format=tfjs imgsz="$HAUTEUR,$LARGEUR" && break
   [ "$essai" = 3 ] && exit 1
   python3 -m pip uninstall -y tensorflow-decision-forests >/dev/null 2>&1 || true
+  SITE="$(python3 -c 'import sysconfig; print(sysconfig.get_paths()["purelib"])')"
+  mkdir -p "$SITE/tensorflow_decision_forests"
+  touch "$SITE/tensorflow_decision_forests/__init__.py"
 done
 
 rm -rf "$RACINE/models/yolo11n"
