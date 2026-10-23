@@ -1,7 +1,7 @@
 // Service worker : tout le jeu est mis en cache à l'installation pour jouer hors ligne.
 // Changer VERSION à chaque mise en ligne (et dans index.html, vérifié par tests/pwa.test.js),
 // sinon les téléphones gardent l'ancienne version.
-const VERSION = '1.0.1';
+const VERSION = '1.0.2';
 const CACHE = `street-biathlon-${VERSION}`;
 
 const FICHIERS = [
