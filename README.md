@@ -28,7 +28,8 @@ node --test tests/          # tests unitaires (Node ≥ 18, aucune dépendance)
 python3 tools/serve.py      # HTTPS sur https://<ip-du-pc>:8443 (certificat auto-signé)
 ```
 
-Ajouter `?simgps` pour simuler la course (~3 m/s, environ 35 s pour 100 m) sans bouger.
+Ajouter `?simgps` pour simuler la course (~3 m/s, environ 35 s pour 100 m) sans bouger ; le
+bouton « Skip » de l'écran de course la fait d'un coup (au-delà de 100 m).
 Ajouter `?debug` à l'adresse pour afficher images/s, détections/s, durée d'inférence et flux optique.
 `tests/mire.html` montre la détection sur des photos de feux (clic = plein écran pour viser).
 

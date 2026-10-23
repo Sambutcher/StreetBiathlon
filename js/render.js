@@ -1,6 +1,6 @@
 // Dessin dans le canvas plein écran (coordonnées en points CSS).
 import { CARTOUCHES } from './game.js';
-import { plaque } from './geometry.js';
+import { plaque, placementVideo } from './geometry.js';
 
 export function creerRendu(canvas) {
   const ctx = canvas.getContext('2d');
@@ -20,8 +20,11 @@ export function creerRendu(canvas) {
   window.addEventListener('resize', redimensionner);
   redimensionner();
 
+  // Vidéo entière, placée selon le cadrage (voir placementVideo : pas de découpe de la source).
   function video(source, c) {
-    ctx.drawImage(source, c.sx, c.sy, c.sw, c.sh, 0, 0, largeur, hauteur);
+    const ecran = { x: 0, y: 0, w: largeur, h: hauteur };
+    const p = placementVideo(c, source.videoWidth, source.videoHeight, largeur, hauteur, ecran, ecran);
+    ctx.drawImage(source, p.x, p.y, p.w, p.h);
   }
 
   // Cible de biathlon : plaque blanche à angles droits en léger relief, ronds creusés,
@@ -193,6 +196,11 @@ export function creerRendu(canvas) {
     ctx.restore();
   }
 
+  function effacer() {
+    ctx.fillStyle = '#000';
+    ctx.fillRect(0, 0, largeur, hauteur);
+  }
+
   // Écran de course (caméra éteinte) : distance à vol d'oiseau depuis le départ (sans plafond)
   // et barre qui se remplit jusqu'à l'objectif, verte quand le tir est débloqué.
   // e = course.etat() ; alerte : message exceptionnel (localisation refusée…), sinon null.
@@ -257,6 +265,6 @@ export function creerRendu(canvas) {
   return {
     get largeur() { return largeur; },
     get hauteur() { return hauteur; },
-    video, cible, viseur, cartouches, message, flash, course, zone, diagnostic,
+    video, effacer, cible, viseur, cartouches, message, flash, course, zone, diagnostic,
   };
 }

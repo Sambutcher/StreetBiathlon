@@ -91,6 +91,24 @@ export function zoneVersSource(zone, c, ecranW, ecranH) {
   return { sx: c.sx + zone.x * kx, sy: c.sy + zone.y * ky, sw: zone.w * kx, sh: zone.h * ky };
 }
 
+// Où dessiner la vidéo ENTIÈRE (drawImage(video, x, y, w, h)) pour que la zone `zone` de l'écran
+// remplisse le rectangle `cible` d'un canvas, pour un cadrage `c` calculé sur la taille annoncée
+// vw×vh. Sans découpe de la source, le navigateur étire l'image réellement reçue : juste après
+// l'allumage, iOS livre des images plus petites que videoWidth/videoHeight, et une découpe calculée
+// sur ces dimensions n'affichait qu'un quart de l'image (« bug du quart d'image »).
+export function placementVideo(c, vw, vh, ecranW, ecranH, zone, cible) {
+  const kx = ecranW / c.sw; // pixels vidéo → écran
+  const ky = ecranH / c.sh;
+  const sx = cible.w / zone.w; // écran → canvas cible
+  const sy = cible.h / zone.h;
+  return {
+    x: cible.x + (-c.sx * kx - zone.x) * sx,
+    y: cible.y + (-c.sy * ky - zone.y) * sy,
+    w: vw * kx * sx,
+    h: vh * ky * sy,
+  };
+}
+
 // Plaque blanche de la cible : la boîte du feu agrandie d'une marge.
 export function plaque(boite) {
   const marge = boite.w * 0.15;
