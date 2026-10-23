@@ -3,7 +3,7 @@
 - PWA **vanilla JS sans build** (modules ES), cible iPhone SE 3ᵉ gén. (Safari), hors ligne.
   Ne pas introduire de bundler ni de framework. Licence AGPL-3.0.
 - Partie = cycle course (100 m à vol d'oiseau au GPS, caméra éteinte) → bouton « Position de tir »
-  → tir de 3 balles → course… Tester sans courir avec `?simgps`, diagnostic avec `?debug`.
+  → tir de 3 balles → course… Tester sans courir avec `?simgps` (bouton « Skip » : course faite d'un coup), diagnostic avec `?debug`.
 - Détection : YOLO11n converti en TF.js, `vendor/tf.min.js` 4.22.0. Le PC de dev n'a pas l'AVX :
   la conversion passe par le workflow manuel `export-model.yml` (ultralytics < 8.4).
 - Logique pure (`js/game.js`, `js/geometry.js`, `js/tracker.js`, `js/flow.js`, `js/course.js`)

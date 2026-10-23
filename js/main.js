@@ -31,6 +31,7 @@ const canvas = document.getElementById('jeu');
 const pasDeTir = document.getElementById('pas-de-tir');
 const boutonTir = document.getElementById('position-tir');
 const erreurCamera = document.getElementById('erreur-camera');
+const boutonSkip = document.getElementById('skip');
 
 if ('serviceWorker' in navigator) {
   // Mise à jour : sw.js jamais pris dans le cache HTTP (GitHub Pages le garde 10 min), vérifié à
@@ -74,6 +75,10 @@ function lancerPartie(entree) {
   );
   course.demarrer(Date.now());
   pasDeTir.hidden = false;
+
+  // ?simgps : « Skip » fait la course d'un coup (départ reculé au-delà de DISTANCE_COURSE).
+  boutonSkip.hidden = !SIMGPS;
+  boutonSkip.addEventListener('click', () => course.reculerDepart(DISTANCE_COURSE + 10));
 
   // --- Tir : caméra, suivi de la cible, détection. ---
   let suivi = creerSuivi();
