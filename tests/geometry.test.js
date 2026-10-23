@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { cadrage, letterbox, versEcran, plusProcheDe, ronds, rondVise, zoneDetection, zoneVersSource, plaque, dansRect } from '../js/geometry.js';
+import { cadrage, letterbox, versEcran, plusProcheDe, ronds, rondVise, zoneDetection, zoneVersSource, plaque, dansRect, placementVideo } from '../js/geometry.js';
 
 test('cadrage couvre l\'écran puis zoome au centre', () => {
   // Vidéo portrait 720×1280 sur écran 375×667 : même ratio ≈, zoom 2 → moitié centrale.
@@ -75,6 +75,23 @@ test('aller-retour zone écran → vidéo → entrée modèle → écran', () =>
   for (const [a, b] of [[e.x, 0], [e.y, 0], [e.w, zone.w], [e.h, zone.h]]) assert.ok(Math.abs(a - b) < 1e-9);
   // Source à l'intérieur du cadrage vidéo.
   assert.ok(src.sx >= c.sx - 1e-9 && src.sx + src.sw <= c.sx + c.sw + 1e-9);
+});
+
+test('placementVideo : la zone voulue de l\'écran tombe exactement sur la cible', () => {
+  // Vidéo 720×1280 sur écran 360×640, zoom 2 : la moitié centrale de la vidéo remplit l'écran.
+  const c = cadrage(720, 1280, 360, 640, 2);
+  const ecran = { x: 0, y: 0, w: 360, h: 640 };
+  // Écran entier : vidéo de 720×1280 points, décalée de la moitié de l'écran.
+  assert.deepEqual(placementVideo(c, 720, 1280, 360, 640, ecran, ecran), { x: -180, y: -320, w: 720, h: 1280 });
+  // Zone 90×160 au centre de l'écran vers un canvas 45×80 (moitié) : échelle 0,5.
+  const p = placementVideo(c, 720, 1280, 360, 640, { x: 135, y: 240, w: 90, h: 160 }, { x: 0, y: 0, w: 45, h: 80 });
+  assert.deepEqual(p, { x: (-180 - 135) / 2, y: (-320 - 240) / 2, w: 360, h: 640 });
+  // Le pixel vidéo du centre de la zone (360, 640) tombe au centre de la cible (22,5 ; 40).
+  assert.equal(p.x + (360 / 720) * p.w, 22.5);
+  assert.equal(p.y + (640 / 1280) * p.h, 40);
+  // Cible décalée (letterbox) : simple translation.
+  const q = placementVideo(c, 720, 1280, 360, 640, ecran, { x: 10, y: 20, w: 360, h: 640 });
+  assert.deepEqual([q.x, q.y], [-170, -300]);
 });
 
 test('plaque et dansRect', () => {

@@ -1,7 +1,7 @@
 // Boucle du jeu : une partie alterne course (GPS, caméra éteinte) et tir (caméra, détection des
 // feux, cible suivie par flux optique). La logique pure vit dans game.js, course.js, tracker.js,
 // flow.js et geometry.js ; ce fichier relie le navigateur (caméra, GPS, canvas) à cette logique.
-import { demarrerCamera, arreterCamera } from './camera.js';
+import { demarrerCamera, arreterCamera, relancerAuRetour } from './camera.js';
 import { suivrePosition, garderEcranAllume } from './position.js';
 import { creerCourse } from './course.js';
 import { chargerDetecteur, detecter } from './detector.js';
@@ -9,7 +9,7 @@ import { creerRendu } from './render.js';
 import { creerSuivi } from './tracker.js';
 import { versGris, estimerDecalage } from './flow.js';
 import { nouvelEtat, debloquerTir, finSerie, serieTerminee, voirFeu, quitterFeu, tirer, serieEntamee } from './game.js';
-import { cadrage, letterbox, versEcran, plusProcheDe, ronds, zoneDetection, zoneVersSource } from './geometry.js';
+import { cadrage, letterbox, versEcran, plusProcheDe, ronds, zoneDetection, placementVideo } from './geometry.js';
 
 const URL_MODELE = 'models/yolo11n/model.json';
 const ZOOM = 2; // zoom numérique de l'image affichée
@@ -33,7 +33,16 @@ const boutonTir = document.getElementById('position-tir');
 const erreurCamera = document.getElementById('erreur-camera');
 
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('sw.js').catch((e) => console.warn('Service worker :', e));
+  // Mise à jour : sw.js jamais pris dans le cache HTTP (GitHub Pages le garde 10 min), vérifié à
+  // chaque ouverture ; quand une nouvelle version prend la main, la page se recharge pour
+  // l'afficher (sinon l'ancienne restait jusqu'au rechargement suivant).
+  const dejaControlee = Boolean(navigator.serviceWorker.controller);
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (dejaControlee) location.reload();
+  });
+  navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' })
+    .then((r) => r.update())
+    .catch((e) => console.warn('Service worker :', e));
 }
 
 boutonDemarrer.addEventListener('click', async () => {
@@ -71,6 +80,21 @@ function lancerPartie(entree) {
   let cible = null; // boîte écran du feu quand il est visible
   let allumageCamera = false;
   let finSerieA = null; // instant de la 3e balle
+  relancerAuRetour(video);
+
+  // Mémoire graphique saturée : iOS retire le contexte WebGL de TensorFlow (détection arrêtée,
+  // image réduite). Rien à sauver : on prévient puis on recharge le jeu.
+  let contextePerdu = false;
+  try {
+    tf.backend().gpgpu.gl.canvas.addEventListener('webglcontextlost', () => {
+      if (contextePerdu) return;
+      contextePerdu = true;
+      console.warn('Contexte WebGL perdu : rechargement');
+      setTimeout(() => location.reload(), 1500);
+    });
+  } catch (e) {
+    console.warn('Contexte de TensorFlow non surveillé :', e);
+  }
   let dernierTir = { resultat: null, t: -Infinity };
 
   const canvasEntree = document.createElement('canvas'); // entrée du modèle
@@ -143,7 +167,7 @@ function lancerPartie(entree) {
       canvasFlux.height = h;
       grisPrec = null;
     }
-    ctxFlux.drawImage(video, c.sx, c.sy, c.sw, c.sh, 0, 0, l, h);
+    dessinerVideo(ctxFlux, c, { x: 0, y: 0, w: rendu.largeur, h: rendu.hauteur }, { x: 0, y: 0, w: l, h });
     const gris = versGris(ctxFlux.getImageData(0, 0, l, h).data);
     if (grisPrec) {
       const b = suivi.lire(t0).cible;
@@ -170,11 +194,10 @@ function lancerPartie(entree) {
     const zone = zoneDetection(suivi.lire(t).cible, rendu.largeur, rendu.hauteur,
       canvasEntree.width / canvasEntree.height, cycleDetection++);
     zoneAnalysee = zone;
-    const src = zoneVersSource(zone, c, rendu.largeur, rendu.hauteur);
-    const lb = letterbox(src.sw, src.sh, canvasEntree.width, canvasEntree.height);
+    const lb = letterbox(zone.w, zone.h, canvasEntree.width, canvasEntree.height);
     ctxEntree.fillStyle = 'rgb(114,114,114)';
     ctxEntree.fillRect(0, 0, canvasEntree.width, canvasEntree.height);
-    ctxEntree.drawImage(video, src.sx, src.sy, src.sw, src.sh, lb.dx, lb.dy, lb.dw, lb.dh);
+    dessinerVideo(ctxEntree, c, zone, { x: lb.dx, y: lb.dy, w: lb.dw, h: lb.dh });
     detecter(canvasEntree)
       .then((boites) => {
         if (suivi !== suiviLancement) return; // série terminée entre-temps
@@ -194,6 +217,18 @@ function lancerPartie(entree) {
       })
       .catch((e) => console.error(e))
       .finally(() => { detectionEnCours = false; });
+  }
+
+  // Dessine la zone `zone` de l'écran (vue de la caméra) dans le rectangle `cible` d'un canvas :
+  // vidéo entière placée par placementVideo, jamais découpée (bug du quart d'image sur iOS).
+  function dessinerVideo(ctx, c, zone, cible) {
+    const p = placementVideo(c, video.videoWidth, video.videoHeight, rendu.largeur, rendu.hauteur, zone, cible);
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(cible.x, cible.y, cible.w, cible.h);
+    ctx.clip();
+    ctx.drawImage(video, p.x, p.y, p.w, p.h);
+    ctx.restore();
   }
 
   function imageCourse() {
@@ -258,6 +293,12 @@ function lancerPartie(entree) {
   }
 
   function image(t) {
+    if (contextePerdu) {
+      rendu.effacer();
+      rendu.message('Mémoire saturée, redémarrage…');
+      requestAnimationFrame(image);
+      return;
+    }
     if (finSerieA !== null && t - finSerieA > DELAI_FIN_SERIE_MS) passerEnCourse();
     if (etat.phase === 'course') imageCourse();
     else imageTir(t);
