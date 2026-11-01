@@ -9,7 +9,7 @@ import { creerRendu } from './render.js';
 import * as son from './son.js';
 import { creerSuivi } from './tracker.js';
 import { versGris, estimerDecalage } from './flow.js';
-import { nouvelEtat, debloquerTir, finSerie, serieTerminee, bilanSerie, multiplicateur, voirFeu, quitterFeu, tirer, serieEntamee } from './game.js';
+import { nouvelEtat, debloquerTir, finSerie, serieTerminee, multiplicateur, voirFeu, quitterFeu, tirer, serieEntamee } from './game.js';
 import { cadrage, letterbox, versEcran, plusProcheDe, ronds, zoneDetection, placementVideo, distanceFeu, pointsPourDistance } from './geometry.js';
 
 const URL_MODELE = 'models/yolo11n/model.json';
@@ -177,10 +177,7 @@ function lancerPartie(entree) {
       else if (bonus) son.bonus();
       else son.touche();
     }
-    if (serieTerminee(etat) && finSerieA === null) {
-      finSerieA = performance.now();
-      son.fanfare(bilanSerie(etat).touches);
-    }
+    if (serieTerminee(etat) && finSerieA === null) finSerieA = performance.now();
   });
 
   // Flux optique : déplacement de l'image depuis la trame précédente, appliqué à la cible.

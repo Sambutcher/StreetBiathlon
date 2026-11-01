@@ -4,7 +4,6 @@
 
 const VOLUME = 1; // gain général
 const DELAI_IMPACT = 0.07; // s entre le coup de feu et son résultat (touche / raté)
-const DELAI_FANFARE = 0.7; // s entre la dernière balle et la fanfare
 
 let ctx = null;
 let bufferBruit = null;
@@ -59,11 +58,11 @@ function bruit(debut, duree, { filtre = 'lowpass', freq = 2000, volume = 0.4 } =
   src.stop(t + duree);
 }
 
-// Coup de feu : claquement sec et sourd.
+// Coup de feu : claquement très bref et sec (bruit aigu + toc court).
 export function tir() {
   if (!pret()) return;
-  bruit(0, 0.09, { filtre: 'bandpass', freq: 1800, volume: 0.5 });
-  note(140, 0, 0.12, { type: 'triangle', fin: 45, volume: 0.4 });
+  bruit(0, 0.035, { filtre: 'highpass', freq: 2200, volume: 0.6 });
+  note(180, 0, 0.04, { type: 'triangle', fin: 70, volume: 0.25 });
 }
 
 // Touche : « ting » métallique.
@@ -99,17 +98,4 @@ export function tirDebloque() {
   if (!pret()) return;
   note(880, 0, 0.11, { type: 'square', volume: 0.12 });
   note(880, 0.17, 0.11, { type: 'square', volume: 0.12 });
-}
-
-// Fin de série selon le nombre de ronds touchés (0 : silence).
-export function fanfare(touches) {
-  if (!pret() || touches === 0) return;
-  const melodie = [523, 659, 784, 1047].slice(0, touches + 1); // do mi sol do
-  melodie.forEach((f, i) => {
-    const dernier = i === melodie.length - 1;
-    note(f, DELAI_FANFARE + i * 0.13, dernier ? 0.7 : 0.14, { type: 'triangle', volume: 0.22 });
-  });
-  if (touches === 3) {
-    [659, 784, 1319].forEach((f) => note(f, DELAI_FANFARE + 0.39, 0.7, { type: 'triangle', volume: 0.12 }));
-  }
 }
