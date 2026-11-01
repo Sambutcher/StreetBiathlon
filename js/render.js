@@ -29,7 +29,7 @@ export function creerRendu(canvas) {
 
   // Cible de biathlon : plaque blanche à angles droits en léger relief, ronds creusés,
   // éclats gris aux tirs manqués sur la plaque.
-  function cible(boite, listeRonds, touches, impacts) {
+  function cible(boite, listeRonds, touches, impacts, bonus = false) {
     const p = plaque(boite);
     ctx.save();
     // Ombre portée : la plaque semble décollée de la scène.
@@ -37,7 +37,7 @@ export function creerRendu(canvas) {
     ctx.shadowBlur = 6;
     ctx.shadowOffsetX = 2;
     ctx.shadowOffsetY = 3;
-    ctx.fillStyle = '#ecece6';
+    ctx.fillStyle = bonus ? '#f4e3a8' : '#ecece6'; // plaque légèrement dorée pendant le bonus
     ctx.fillRect(p.x, p.y, p.w, p.h);
     ctx.restore();
     biseau(p, Math.max(1.5, (p.w - boite.w) * 0.18));
@@ -207,8 +207,8 @@ export function creerRendu(canvas) {
   }
 
   // Score global (haut à droite, `rebond` 0–1 : léger grossissement après une touche) et, sous la
-  // plaque de `boite` (null sans feu), les points en jeu (« ? » si `enJeu` est null ; `bonus` : ×2).
-  function points(score, boite, enJeu, rebond = 0, bonus = false) {
+  // plaque de `boite` (null sans feu), les points en jeu (« ? » si `enJeu` est null).
+  function points(score, boite, enJeu, rebond = 0) {
     const police = '700 30px -apple-system, system-ui, sans-serif';
     ctx.font = police;
     const w = Math.max(44, ctx.measureText(`${score} pts`).width + 24);
@@ -224,9 +224,9 @@ export function creerRendu(canvas) {
       ctx.lineJoin = 'round';
       ctx.lineWidth = 5;
       ctx.strokeStyle = 'rgba(0,0,0,0.75)';
-      const texte = enJeu === null ? '?' : `${enJeu}${bonus ? ' ×2' : ''}`;
+      const texte = enJeu === null ? '?' : `${enJeu}`;
       ctx.strokeText(texte, x, p.y + p.h + 30);
-      ctx.fillStyle = enJeu === null ? '#ccc' : bonus ? '#ff9f1a' : '#ffdc00';
+      ctx.fillStyle = enJeu === null ? '#ccc' : '#ffdc00';
       ctx.fillText(texte, x, p.y + p.h + 30);
       ctx.restore();
     }

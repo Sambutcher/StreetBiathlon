@@ -268,16 +268,16 @@ function lancerPartie(entree) {
     distance = cible ? distanceFeu(cible, c, video.videoWidth, rendu.largeur, FOV_HORIZONTAL_DEG, HAUTEUR_FEU_M) : null;
     pointsEnJeu = distance === null ? null : pointsPourDistance(distance);
 
+    const bonus = multiplicateur(etat);
     rendu.video(video, c);
     if (cible) {
-      rendu.cible(cible, ronds(cible), etat.touches, etat.impacts);
+      rendu.cible(cible, ronds(cible), etat.touches, etat.impacts, bonus > 1);
       rendu.viseur();
     }
     if (cible || serieEntamee(etat)) rendu.cartouches(etat.cartouches);
     const age = t - dernierTir.t;
     const rebond = dernierTir.resultat === 'touche' && age < DUREE_REBOND_MS ? 1 - age / DUREE_REBOND_MS : 0;
-    const bonus = multiplicateur(etat);
-    rendu.points(etat.score, cible, pointsEnJeu === null ? null : pointsEnJeu * bonus, rebond, bonus > 1);
+    rendu.points(etat.score, cible, pointsEnJeu === null ? null : pointsEnJeu * bonus, rebond);
     rendu.retourTir(dernierTir, cible, age / DUREE_RETOUR_MS);
     if (cible && serieTerminee(etat)) rendu.message('Plus de cartouches');
     else if (!cible && !serieTerminee(etat)) rendu.message(serieEntamee(etat) ? 'Retrouvez le feu…' : 'Cherchez un feu…');
