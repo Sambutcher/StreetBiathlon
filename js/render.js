@@ -2,6 +2,10 @@
 import { CARTOUCHES } from './game.js';
 import { plaque, placementVideo } from './geometry.js';
 
+// Couleurs de la plaque : face et 4 faces du biseau (la teinte verte signale la phase bonus).
+const PLAQUE = { face: '#ecece6', haut: '#ffffff', gauche: '#f8f8f4', bas: '#a9a9a0', droite: '#bdbdb4' };
+const PLAQUE_BONUS = { face: '#3fcf5e', haut: '#9af5ae', gauche: '#72e48b', bas: '#1c8a38', droite: '#27a847' };
+
 export function creerRendu(canvas) {
   const ctx = canvas.getContext('2d');
   let largeur = 0;
@@ -37,10 +41,11 @@ export function creerRendu(canvas) {
     ctx.shadowBlur = 6;
     ctx.shadowOffsetX = 2;
     ctx.shadowOffsetY = 3;
-    ctx.fillStyle = bonus ? '#f4e3a8' : '#ecece6'; // plaque légèrement dorée pendant le bonus
+    const c = bonus ? PLAQUE_BONUS : PLAQUE;
+    ctx.fillStyle = c.face;
     ctx.fillRect(p.x, p.y, p.w, p.h);
     ctx.restore();
-    biseau(p, Math.max(1.5, (p.w - boite.w) * 0.18));
+    biseau(p, Math.max(1.5, (p.w - boite.w) * 0.18), c);
 
     ctx.save();
     listeRonds.forEach((r, i) => {
@@ -71,7 +76,7 @@ export function creerRendu(canvas) {
   }
 
   // Bords de la plaque : haut/gauche éclairés, bas/droite dans l'ombre.
-  function biseau(p, b) {
+  function biseau(p, b, c) {
     const { x, y, w, h } = p;
     const face = (points, couleur) => {
       ctx.beginPath();
@@ -80,10 +85,10 @@ export function creerRendu(canvas) {
       ctx.fillStyle = couleur;
       ctx.fill();
     };
-    face([[x, y], [x + w, y], [x + w - b, y + b], [x + b, y + b]], '#ffffff');
-    face([[x, y], [x + b, y + b], [x + b, y + h - b], [x, y + h]], '#f8f8f4');
-    face([[x, y + h], [x + b, y + h - b], [x + w - b, y + h - b], [x + w, y + h]], '#a9a9a0');
-    face([[x + w, y], [x + w, y + h], [x + w - b, y + h - b], [x + w - b, y + b]], '#bdbdb4');
+    face([[x, y], [x + w, y], [x + w - b, y + b], [x + b, y + b]], c.haut);
+    face([[x, y], [x + b, y + b], [x + b, y + h - b], [x, y + h]], c.gauche);
+    face([[x, y + h], [x + b, y + h - b], [x + w - b, y + h - b], [x + w, y + h]], c.bas);
+    face([[x + w, y], [x + w, y + h], [x + w - b, y + h - b], [x + w - b, y + b]], c.droite);
   }
 
   // Petit éclat irrégulier ; sa forme dépend de (u, v) pour rester identique d'une image à l'autre.
