@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { nouvelEtat, debloquerTir, finSerie, serieTerminee, voirFeu, quitterFeu, tirer, serieEntamee, CARTOUCHES } from '../js/game.js';
+import { nouvelEtat, debloquerTir, finSerie, serieTerminee, voirFeu, quitterFeu, tirer, serieEntamee, CARTOUCHES, bilanSerie } from '../js/game.js';
 import { creerSuivi } from '../js/tracker.js';
 
 const cible = { x: 0, y: 0, w: 30, h: 90 }; // boîte du feu ; plaque = marge de 4,5 autour
@@ -175,4 +175,13 @@ test('un rond déjà touché ne rapporte rien et le score survit à la série', 
   assert.equal(deuxieme.gain, 0);
   assert.equal(deuxieme.etat.score, 7);
   assert.equal(debloquerTir(finSerie(deuxieme.etat)).score, 7);
+});
+
+test('bilanSerie : ronds touchés et points de la série seulement', () => {
+  let etat = tirer(voirFeu(enPosition()), cible, haut, 5).etat;
+  etat = debloquerTir(finSerie(etat)); // nouvelle série : le score précédent ne compte pas
+  assert.deepEqual(bilanSerie(etat), { touches: 0, points: 0 });
+  etat = tirer(voirFeu(etat), cible, haut, 9).etat;
+  assert.deepEqual(bilanSerie(etat), { touches: 1, points: 9 });
+  assert.equal(etat.score, 14);
 });

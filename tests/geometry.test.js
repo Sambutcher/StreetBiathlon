@@ -112,8 +112,11 @@ test('distanceFeu : sténopé, inversement proportionnelle à la hauteur de la b
   assert.ok(Math.abs(moitie - 20) < 1e-9);
 });
 
-test('pointsPourDistance : 1 point par mètre arrondi, au moins 1', () => {
+test('pointsPourDistance : 1 point par mètre arrondi, null hors de 2–100 m', () => {
   assert.equal(pointsPourDistance(12.4), 12);
   assert.equal(pointsPourDistance(12.6), 13);
-  assert.equal(pointsPourDistance(0.2), 1);
+  assert.equal(pointsPourDistance(2), 2);
+  assert.equal(pointsPourDistance(1.9), null);
+  assert.equal(pointsPourDistance(100.4), null);
+  assert.equal(pointsPourDistance(NaN), null);
 });

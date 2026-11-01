@@ -188,22 +188,59 @@ export function creerRendu(canvas) {
     ctx.restore();
   }
 
-  // Score global (haut à droite) et, sous la plaque de `boite` (null sans feu), les points en jeu.
-  function points(score, boite, enJeu) {
+  // Pastille sombre centrée en (cx, cy) avec un texte ; renvoie rien. Lisible sur tout fond.
+  function pastille(texte, cx, cy, police, couleur, echelle = 1) {
     ctx.save();
-    ctx.textAlign = 'right';
-    ctx.textBaseline = 'top';
-    ctx.shadowColor = 'rgba(0,0,0,0.7)';
-    ctx.shadowBlur = 4;
-    ctx.fillStyle = '#fff';
-    ctx.font = '700 32px -apple-system, system-ui, sans-serif';
-    ctx.fillText(`${score} pts`, largeur - 16, margeHaut + 16);
+    ctx.translate(cx, cy);
+    ctx.scale(echelle, echelle);
+    ctx.font = police;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    const h = parseFloat(police.split('px')[0].split(' ').pop()) + 14;
+    const w = Math.max(h, ctx.measureText(texte).width + 24);
+    ctx.fillStyle = 'rgba(0,0,0,0.6)';
+    rectArrondi(-w / 2, -h / 2, w, h, h / 2);
+    ctx.fill();
+    ctx.fillStyle = couleur;
+    ctx.fillText(texte, 0, 1);
+    ctx.restore();
+  }
+
+  // Score global (haut à droite, `rebond` 0–1 : léger grossissement après une touche) et, sous la
+  // plaque de `boite` (null sans feu), les points en jeu (« ? » si `enJeu` est null).
+  function points(score, boite, enJeu, rebond = 0) {
+    const police = '700 30px -apple-system, system-ui, sans-serif';
+    ctx.font = police;
+    const w = Math.max(44, ctx.measureText(`${score} pts`).width + 24);
+    pastille(`${score} pts`, largeur - 16 - w / 2, margeHaut + 40, police, '#fff', 1 + 0.25 * rebond);
     if (boite) {
       const p = plaque(boite);
-      ctx.textAlign = 'center';
-      ctx.fillStyle = '#ffdc00';
-      ctx.font = '700 28px -apple-system, system-ui, sans-serif';
-      ctx.fillText(`${enJeu}`, Math.min(Math.max(boite.x + boite.w / 2, 24), largeur - 24), p.y + p.h + 6);
+      const x = Math.min(Math.max(boite.x + boite.w / 2, 30), largeur - 30);
+      pastille(enJeu === null ? '?' : `${enJeu}`, x, p.y + p.h + 30, '700 26px -apple-system, system-ui, sans-serif',
+        enJeu === null ? '#ccc' : '#ffdc00');
+    }
+  }
+
+  // Retour du dernier tir, `age` de 0 à 1 : touche = « +N » qui monte de la cible en s'effaçant,
+  // raté = croix rouge brève sous la cible. `boite` : feu visé (null : centre de l'écran).
+  function retourTir(tir, boite, age) {
+    if (age >= 1) return;
+    const x = boite ? boite.x + boite.w / 2 : largeur / 2;
+    const y = boite ? boite.y + boite.h / 2 : hauteur / 2;
+    ctx.save();
+    ctx.globalAlpha = 1 - age * age;
+    if (tir.resultat === 'touche') {
+      if (tir.gain > 0) pastille(`+${tir.gain}`, x, y - 30 - age * 70, '700 30px -apple-system, system-ui, sans-serif', '#2ecc40');
+    } else {
+      ctx.strokeStyle = '#ff4136';
+      ctx.lineWidth = 5;
+      ctx.lineCap = 'round';
+      const r = 14;
+      const yc = boite ? plaque(boite).y + plaque(boite).h + 78 : y + 90;
+      ctx.beginPath();
+      ctx.moveTo(x - r, yc - r); ctx.lineTo(x + r, yc + r);
+      ctx.moveTo(x + r, yc - r); ctx.lineTo(x - r, yc + r);
+      ctx.stroke();
     }
     ctx.restore();
   }
@@ -288,6 +325,6 @@ export function creerRendu(canvas) {
   return {
     get largeur() { return largeur; },
     get hauteur() { return hauteur; },
-    video, effacer, cible, viseur, cartouches, message, flash, points, course, zone, diagnostic,
+    video, effacer, cible, viseur, cartouches, message, flash, points, retourTir, course, zone, diagnostic,
   };
 }

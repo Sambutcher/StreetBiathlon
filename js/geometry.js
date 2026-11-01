@@ -128,7 +128,12 @@ export function distanceFeu(boite, c, videoW, ecranW, fovDeg, hauteurM) {
   return (focaleEcran * hauteurM) / boite.h;
 }
 
-// 1 point par mètre, au moins 1.
+// Distances jugées crédibles pour un feu de biathlon ; au-delà l'estimation n'est pas fiable.
+export const DISTANCE_MIN = 2;
+export const DISTANCE_MAX = 100;
+
+// 1 point par mètre ; null (« ? » à l'écran, aucun point) si la distance n'est pas crédible.
 export function pointsPourDistance(metres) {
-  return Math.max(1, Math.round(metres));
+  if (!(metres >= DISTANCE_MIN && metres <= DISTANCE_MAX)) return null;
+  return Math.round(metres);
 }

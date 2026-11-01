@@ -8,7 +8,7 @@ import { chargerDetecteur, detecter } from './detector.js';
 import { creerRendu } from './render.js';
 import { creerSuivi } from './tracker.js';
 import { versGris, estimerDecalage } from './flow.js';
-import { nouvelEtat, debloquerTir, finSerie, serieTerminee, voirFeu, quitterFeu, tirer, serieEntamee } from './game.js';
+import { nouvelEtat, debloquerTir, finSerie, serieTerminee, bilanSerie, voirFeu, quitterFeu, tirer, serieEntamee, CARTOUCHES } from './game.js';
 import { cadrage, letterbox, versEcran, plusProcheDe, ronds, zoneDetection, placementVideo, distanceFeu, pointsPourDistance } from './geometry.js';
 
 const URL_MODELE = 'models/yolo11n/model.json';
@@ -19,6 +19,8 @@ const RAYON_FLUX = 12; // déplacement max mesuré par trame, en pixels de l'ima
 const DISTANCE_COURSE = 100; // mètres à vol d'oiseau pour débloquer le tir
 const DELAI_FIN_SERIE_MS = 1500; // la cible reste visible après la 3e balle
 const DUREE_FLASH_MS = 250;
+const DUREE_RETOUR_MS = 1000; // « +N » qui monte, croix du raté
+const DUREE_REBOND_MS = 300; // grossissement du score après une touche
 const FOV_HORIZONTAL_DEG = 50; // champ de vision du côté court du flux (à calibrer avec ?debug)
 const HAUTEUR_FEU_M = 0.75; // hauteur réelle de la boîte détectée
 const PARAMS = new URLSearchParams(location.search);
@@ -102,7 +104,7 @@ function lancerPartie(entree) {
   } catch (e) {
     console.warn('Contexte de TensorFlow non surveillé :', e);
   }
-  let dernierTir = { resultat: null, t: -Infinity };
+  let dernierTir = { resultat: null, t: -Infinity, gain: 0 };
   let distance = null; // distance estimée au feu visible (m)
   let pointsEnJeu = null; // points que rapporterait une touche sur ce feu
 
@@ -161,7 +163,7 @@ function lancerPartie(entree) {
     if (!cible) return;
     const r = tirer(etat, cible, { x: rendu.largeur / 2, y: rendu.hauteur / 2 }, pointsEnJeu ?? 0);
     etat = r.etat;
-    if (r.resultat) dernierTir = { resultat: r.resultat, t: performance.now() };
+    if (r.resultat) dernierTir = { resultat: r.resultat, t: performance.now(), gain: r.gain };
     if (serieTerminee(etat) && finSerieA === null) finSerieA = performance.now();
   });
 
@@ -272,11 +274,15 @@ function lancerPartie(entree) {
       rendu.viseur();
     }
     if (cible || serieEntamee(etat)) rendu.cartouches(etat.cartouches);
-    rendu.points(etat.score, cible, pointsEnJeu);
-    if (cible && serieTerminee(etat)) rendu.message('Plus de cartouches');
-    else if (!cible && !serieTerminee(etat)) rendu.message(serieEntamee(etat) ? 'Retrouvez le feu…' : 'Cherchez un feu…');
-
     const age = t - dernierTir.t;
+    const rebond = dernierTir.resultat === 'touche' && age < DUREE_REBOND_MS ? 1 - age / DUREE_REBOND_MS : 0;
+    rendu.points(etat.score, cible, pointsEnJeu, rebond);
+    rendu.retourTir(dernierTir, cible, age / DUREE_RETOUR_MS);
+    if (serieTerminee(etat)) {
+      const b = bilanSerie(etat);
+      rendu.message(`${b.touches}/${CARTOUCHES} — +${b.points} pts`);
+    } else if (!cible) rendu.message(serieEntamee(etat) ? 'Retrouvez le feu…' : 'Cherchez un feu…');
+
     if (age < DUREE_FLASH_MS) rendu.flash(dernierTir.resultat, 1 - age / DUREE_FLASH_MS);
     if (DEBUG) diagnosticTir(t);
   }

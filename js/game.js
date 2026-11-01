@@ -14,7 +14,12 @@ export function nouvelEtat() {
 
 // En position de tir : carabine chargée, cible vierge.
 export function debloquerTir(etat) {
-  return { ...etat, phase: 'tir', cartouches: CARTOUCHES, ...cibleVierge(), cibleVisible: false };
+  return { ...etat, phase: 'tir', cartouches: CARTOUCHES, ...cibleVierge(), cibleVisible: false, scoreDebutSerie: etat.score };
+}
+
+// Bilan de la série en cours : ronds touchés et points marqués depuis la position de tir.
+export function bilanSerie(etat) {
+  return { touches: etat.touches.filter(Boolean).length, points: etat.score - etat.scoreDebutSerie };
 }
 
 // Série terminée : retour à la course.
