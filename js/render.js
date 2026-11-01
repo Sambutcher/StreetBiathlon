@@ -285,10 +285,13 @@ export function creerRendu(canvas) {
     ctx.fillRect(0, 0, largeur, hauteur);
   }
 
-  // Écran de course (caméra éteinte) : distance à vol d'oiseau depuis le départ (sans plafond)
-  // et barre qui se remplit jusqu'à l'objectif, verte quand le tir est débloqué.
-  // e = course.etat() ; alerte : message exceptionnel (localisation refusée…), sinon null.
-  function course(e, alerte, score, derniereSerie) {
+  // Écran de course (caméra éteinte) : bandeau (temps, distance parcourue, score), compte à rebours
+  // des mètres restants et barre de distance restante qui se vide de gauche à droite (verte à 0,
+  // tir débloqué), bilan de la dernière série en trois ronds.
+  // e = course.etat() ; alerte : message exceptionnel (localisation refusée…), sinon null ;
+  // infos = { temps, parcouru } déjà formatés.
+  function course(e, alerte, score, derniereSerie, infos) {
+    const police = '-apple-system, system-ui, sans-serif';
     ctx.save();
     ctx.fillStyle = '#000';
     ctx.fillRect(0, 0, largeur, hauteur);
@@ -296,38 +299,100 @@ export function creerRendu(canvas) {
     ctx.textBaseline = 'middle';
     const cx = largeur / 2;
     const debloque = e.phase === 'fini';
-
     const enCourse = e.phase === 'course' || debloque;
-    ctx.fillStyle = debloque ? '#2ecc40' : '#fff';
-    ctx.font = '700 96px -apple-system, system-ui, sans-serif';
-    ctx.fillText(enCourse ? `${Math.floor(e.distance)} m` : '— m', cx, hauteur * 0.4);
-    ctx.fillStyle = '#fff';
-    ctx.font = '600 28px -apple-system, system-ui, sans-serif';
-    ctx.fillText(`${score} pts`, cx, hauteur * 0.2);
-    if (derniereSerie) {
-      ctx.fillStyle = '#aaa';
-      ctx.font = '500 20px -apple-system, system-ui, sans-serif';
-      ctx.fillText(`Dernière série : ${derniereSerie.touches}/${CARTOUCHES} — +${derniereSerie.points} pts`, cx, hauteur * 0.2 + 36);
-    }
 
+    // Bandeau.
+    const hb = margeHaut + 66;
+    ctx.fillStyle = '#12161c';
+    ctx.fillRect(0, 0, largeur, hb);
+    ctx.fillStyle = '#d4a017';
+    ctx.fillRect(0, hb - 3, largeur, 3);
+    const cases = [['TEMPS', infos.temps, '#fff'], ['PARCOURU', infos.parcouru, '#fff'], ['SCORE', `${score}`, '#d4a017']];
+    cases.forEach(([nom, valeur, couleur], i) => {
+      const x = (largeur / 3) * (i + 0.5);
+      ctx.fillStyle = '#8b95a3';
+      ctx.font = `600 10px ${police}`;
+      ctx.fillText(nom, x, margeHaut + 16);
+      ctx.fillStyle = couleur;
+      ctx.font = `700 26px ${police}`;
+      ctx.fillText(valeur, x, margeHaut + 42);
+      if (i) {
+        ctx.fillStyle = '#272d36';
+        ctx.fillRect((largeur / 3) * i, margeHaut + 8, 1, hb - margeHaut - 22);
+      }
+    });
+
+    // Mètres restants.
+    const restant = enCourse ? Math.max(0, e.objectif - e.distance) : e.objectif;
+    ctx.fillStyle = '#8b95a3';
+    ctx.font = `600 13px ${police}`;
+    ctx.fillText('RESTE', cx, hauteur * 0.26);
+    const nombre = enCourse ? `${Math.ceil(restant)}` : '—';
+    ctx.font = `700 104px ${police}`;
+    const largeurNombre = ctx.measureText(nombre).width;
+    ctx.font = `700 40px ${police}`;
+    const largeurM = ctx.measureText('m').width;
+    const x0 = cx - (largeurNombre + 8 + largeurM) / 2;
+    ctx.textAlign = 'left';
+    ctx.fillStyle = debloque ? '#2ecc40' : '#fff';
+    ctx.font = `700 104px ${police}`;
+    ctx.fillText(nombre, x0, hauteur * 0.37);
+    ctx.fillStyle = debloque ? '#2ecc40' : '#8b95a3';
+    ctx.font = `700 40px ${police}`;
+    ctx.fillText('m', x0 + largeurNombre + 8, hauteur * 0.37 + 26);
+    ctx.textAlign = 'center';
+
+    // Barre : distance restante, ancrée à droite, elle se vide de gauche à droite.
     const bw = Math.min(largeur - 75, 300);
-    const bh = 16;
+    const bh = 18;
     const bx = cx - bw / 2;
-    const by = hauteur * 0.56;
-    ctx.fillStyle = '#222';
+    const by = hauteur * 0.48;
+    ctx.fillStyle = '#1d222a';
     rectArrondi(bx, by, bw, bh, bh / 2);
     ctx.fill();
-    const part = enCourse ? Math.min(1, e.distance / e.objectif) : 0;
+    const part = enCourse ? Math.min(1, restant / e.objectif) : 1;
     if (part > 0) {
-      ctx.fillStyle = debloque ? '#2ecc40' : '#d4a017';
-      rectArrondi(bx, by, Math.max(bh, bw * part), bh, bh / 2);
+      const w = Math.max(bh, bw * part);
+      ctx.fillStyle = '#d4a017';
+      rectArrondi(bx + bw - w, by, w, bh, bh / 2);
       ctx.fill();
     }
 
     if (alerte) {
       ctx.fillStyle = '#ff6b5b';
-      ctx.font = '600 16px -apple-system, system-ui, sans-serif';
-      ctx.fillText(alerte, cx, by + 48);
+      ctx.font = `600 16px ${police}`;
+      ctx.fillText(alerte, cx, by + 40);
+    }
+
+    // Dernière série : trois ronds (blancs = touchés) et points marqués.
+    if (derniereSerie) {
+      const bxs = 24;
+      const bys = hauteur * 0.6;
+      const hs = 52;
+      ctx.fillStyle = '#12161c';
+      rectArrondi(bxs, bys, largeur - 2 * bxs, hs, 14);
+      ctx.fill();
+      ctx.strokeStyle = '#272d36';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+      ctx.textAlign = 'left';
+      ctx.fillStyle = '#8b95a3';
+      ctx.font = `600 10px ${police}`;
+      ctx.fillText('DERNIÈRE SÉRIE', bxs + 16, bys + hs / 2);
+      for (let i = 0; i < CARTOUCHES; i++) {
+        const touche = i < derniereSerie.touches;
+        ctx.beginPath();
+        ctx.arc(cx + 14 + i * 34, bys + hs / 2, 12, 0, 2 * Math.PI);
+        ctx.fillStyle = touche ? '#fff' : '#111';
+        ctx.fill();
+        ctx.strokeStyle = touche ? '#a8a8a0' : '#444';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+      }
+      ctx.textAlign = 'right';
+      ctx.fillStyle = '#2ecc40';
+      ctx.font = `700 24px ${police}`;
+      ctx.fillText(`+${derniereSerie.points}`, largeur - bxs - 16, bys + hs / 2);
     }
     ctx.restore();
   }

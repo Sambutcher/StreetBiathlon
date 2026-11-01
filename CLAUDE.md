@@ -15,7 +15,7 @@
 - Tout fichier servi doit figurer dans `FICHIERS` de `sw.js` ; `VERSION` (sw.js + index.html)
   change à chaque mise en ligne. `tests/pwa.test.js` vérifie les deux. Depuis 1.0.1, `sw.js` est
   vérifié à chaque ouverture et la page se recharge quand une nouvelle version prend la main.
-- Dev sur iPhone : `python3 tools/serve.py` (HTTPS auto-signé, IP locale 192.168.1.147:8443).
+- Dev sur iPhone : `python3 tools/serve.py` (HTTPS auto-signé, port 8443 ; l'IP du PC change : la lire avec `ip -4 addr`, et supprimer `tools/.cert/` si elle change pour regénérer le certificat).
 - Mise en ligne : GitHub Pages sur `main` (https://sambutcher.github.io/StreetBiathlon/),
   merge fait par Samuel ; release `vX.Y.Z` ensuite.
 - Sons : `js/son.js`, Web Audio synthétisé (pas de fichiers), coupé par le commutateur silencieux d'iOS ; contexte créé sur clic (Démarrer, Position de tir). Pas de bouton on/off. Impossible à tester sans iPhone : timbres réglés à l'oreille par Samuel.

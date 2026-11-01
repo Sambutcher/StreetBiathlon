@@ -41,8 +41,8 @@ const boutonTir = document.getElementById('position-tir');
 const erreurCamera = document.getElementById('erreur-camera');
 const boutonSkip = document.getElementById('skip');
 const boutonFin = document.getElementById('fin-course');
-const suiviTemps = document.getElementById('suivi-temps');
-const suiviDistance = document.getElementById('suivi-distance');
+const recapPoints = document.getElementById('recap-points');
+const rondsAccueil = document.querySelectorAll('#cible-accueil i');
 const recap = document.getElementById('recap');
 const recapChiffres = document.getElementById('recap-chiffres');
 document.getElementById('nouvelle-partie').addEventListener('click', () => location.reload());
@@ -68,14 +68,21 @@ if ('serviceWorker' in navigator) {
 boutonDemarrer.addEventListener('click', async () => {
   boutonDemarrer.disabled = true;
   son.activerSon(); // geste utilisateur exigé par iOS
+  const progression = (n) => {
+    rondsAccueil.forEach((r, i) => r.classList.toggle('blanc', i < n));
+    statut.textContent = n < 3 ? `Chargement du détecteur… ${Math.round((n * 100) / 3)} %` : 'Prêt : partez !';
+  };
+  progression(0);
   try {
     garderEcranAllume();
-    statut.textContent = 'Chargement du détecteur…';
-    const entree = await chargerDetecteur(URL_MODELE);
+    const entree = await chargerDetecteur(URL_MODELE, progression);
+    boutonDemarrer.classList.add('pret');
+    await new Promise((ok) => setTimeout(ok, 600)); // les trois ronds blancs restent visibles un instant
     accueil.hidden = true;
     lancerPartie(entree);
   } catch (e) {
     console.error(e);
+    rondsAccueil.forEach((r) => r.classList.remove('blanc'));
     statut.textContent = `Impossible de démarrer : ${e.message || e}`;
     boutonDemarrer.disabled = false;
   }
@@ -181,19 +188,18 @@ function lancerPartie(entree) {
     pasDeTir.hidden = true;
     const resume = parcours.resume(Date.now());
     const st = statistiques(resume, etat.score);
-    const ligne = (nom, valeur, classe = '') => `<div class="${classe}"><dt>${nom}</dt><dd>${valeur}</dd></div>`;
-    const duree = (ms) => (ms === null ? '—' : formaterDuree(ms));
+    const ligne = (nom, valeur) => `<div><dt>${nom}</dt><dd>${valeur}</dd></div>`;
+    recapPoints.textContent = `${st.score} pts`;
     recapChiffres.innerHTML = [
-      ligne('Score', `${st.score} pts`, 'large'),
       ligne('Distance', formaterDistance(resume.distance)),
       ligne('Temps', formaterDuree(resume.duree)),
-      ligne('Vitesse', st.vitesseKmh === null ? '—' : `${st.vitesseKmh.toFixed(1).replace('.', ',')} km/h`),
-      ligne('Tirs réussis', st.tirs ? `${st.touches}/${st.tirs} <small>${st.reussite} %</small>` : '—'),
+      ligne('Vitesse', st.vitesseKmh === null ? '—' : `${st.vitesseKmh.toFixed(1).replace('.', ',')}<small>km/h</small>`),
+      ligne('Tirs réussis', st.tirs ? `${st.touches}/${st.tirs}<small>${st.reussite} %</small>` : '—'),
       ligne('Temps / tir', st.tempsMoyenTir === null ? '—' : formaterSecondes(st.tempsMoyenTir)),
-      ligne('Temps / tour', duree(st.tempsMoyenTour)),
+      ligne('Temps / tour', st.tempsMoyenTour === null ? '—' : formaterDuree(st.tempsMoyenTour)),
     ].join('');
     recap.hidden = false;
-    dessinerCarte(document.getElementById('carte'), resume);
+    dessinerCarte(document.getElementById('carte'), resume, { haut: 110, bas: 190 });
   });
 
   // Série terminée : caméra coupée, nouvelle course depuis la position actuelle.
@@ -311,14 +317,15 @@ function lancerPartie(entree) {
     if (cle === dernierEtatRendu && t - dernierRendu < INTERVALLE_RENDU_COURSE_MS) return;
     dernierEtatRendu = cle;
     dernierRendu = t;
-    suiviTemps.textContent = formaterDuree(Date.now() - debutPartie);
-    suiviDistance.textContent = formaterDistance(parcours.distance());
     if (e.phase === 'fini' && !tirDebloqueSonne) {
       tirDebloqueSonne = true;
       son.tirDebloque();
     }
     boutonTir.disabled = e.phase !== 'fini' || allumageCamera;
-    rendu.course(e, alerteGps, etat.score, etat.derniereSerie);
+    rendu.course(e, alerteGps, etat.score, etat.derniereSerie, {
+      temps: formaterDuree(Date.now() - debutPartie),
+      parcouru: formaterDistance(parcours.distance()),
+    });
     if (DEBUG) {
       rendu.diagnostic([
         `phase ${e.phase}`,
