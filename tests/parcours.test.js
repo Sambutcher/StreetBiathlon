@@ -53,8 +53,9 @@ test('statistiques', () => {
   assert.equal(s.reussite, 67);
   assert.equal(s.meilleureSerie, 90);
   assert.equal(s.tempsMoyenTir, 3000);
-  assert.equal(s.tempsMoyenTour, 90000);
-  assert.equal(statistiques({ ...r, debutsSeries: [5] }, 0).tempsMoyenTour, null);
+  assert.equal(s.tempsMoyenTour, 900000);
+  assert.equal(statistiques({ ...r, debutsSeries: [5] }, 0).tempsMoyenTour, 1800000);
+  assert.equal(statistiques({ ...r, debutsSeries: [] }, 0).tempsMoyenTour, null);
   assert.equal(statistiques({ ...r, delais: [] }, 0).tempsMoyenTir, null);
   assert.equal(statistiques({ ...r, tirs: [] }, 0).reussite, null);
 });
