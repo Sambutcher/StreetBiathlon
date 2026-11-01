@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { nouvelEtat, debloquerTir, finSerie, serieTerminee, voirFeu, quitterFeu, tirer, serieEntamee, CARTOUCHES, bilanSerie } from '../js/game.js';
+import { nouvelEtat, debloquerTir, finSerie, serieTerminee, voirFeu, quitterFeu, tirer, serieEntamee, CARTOUCHES, bilanSerie, multiplicateur } from '../js/game.js';
 import { creerSuivi } from '../js/tracker.js';
 
 const cible = { x: 0, y: 0, w: 30, h: 90 }; // boîte du feu ; plaque = marge de 4,5 autour
@@ -190,4 +190,29 @@ test('finSerie garde le bilan de la série pour l\'écran de course', () => {
   const etat = finSerie(tirer(voirFeu(enPosition()), cible, haut, 9).etat);
   assert.deepEqual(etat.derniereSerie, { touches: 1, points: 9 });
   assert.equal(etat.phase, 'course');
+});
+
+test('bonus : 2 premiers tirs bons → la 3e balle vaut double', () => {
+  const milieu = { x: 15, y: 45 };
+  const bas = { x: 15, y: 75 };
+  let etat = voirFeu(enPosition());
+  assert.equal(multiplicateur(etat), 1);
+  etat = tirer(etat, cible, haut, 5).etat;
+  etat = tirer(etat, cible, milieu, 5).etat;
+  assert.equal(multiplicateur(etat), 2);
+  const r = tirer(etat, cible, bas, 5);
+  assert.equal(r.gain, 10);
+  assert.equal(r.etat.score, 20);
+});
+
+test('pas de bonus si un des 2 premiers tirs est raté', () => {
+  const milieu = { x: 15, y: 45 };
+  const bas = { x: 15, y: 75 };
+  let etat = voirFeu(enPosition());
+  etat = tirer(etat, cible, ailleurs, 5).etat;
+  etat = tirer(etat, cible, haut, 5).etat;
+  etat = tirer(etat, cible, milieu, 5).etat;
+  assert.equal(multiplicateur(etat), 1);
+  assert.equal(etat.score, 10);
+  assert.equal(tirer(voirFeu(enPosition()), cible, bas, 5).gain, 5);
 });

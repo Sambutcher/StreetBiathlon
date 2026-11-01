@@ -207,8 +207,8 @@ export function creerRendu(canvas) {
   }
 
   // Score global (haut à droite, `rebond` 0–1 : léger grossissement après une touche) et, sous la
-  // plaque de `boite` (null sans feu), les points en jeu (« ? » si `enJeu` est null).
-  function points(score, boite, enJeu, rebond = 0) {
+  // plaque de `boite` (null sans feu), les points en jeu (« ? » si `enJeu` est null ; `bonus` : ×2).
+  function points(score, boite, enJeu, rebond = 0, bonus = false) {
     const police = '700 30px -apple-system, system-ui, sans-serif';
     ctx.font = police;
     const w = Math.max(44, ctx.measureText(`${score} pts`).width + 24);
@@ -224,9 +224,9 @@ export function creerRendu(canvas) {
       ctx.lineJoin = 'round';
       ctx.lineWidth = 5;
       ctx.strokeStyle = 'rgba(0,0,0,0.75)';
-      const texte = enJeu === null ? '?' : `${enJeu}`;
+      const texte = enJeu === null ? '?' : `${enJeu}${bonus ? ' ×2' : ''}`;
       ctx.strokeText(texte, x, p.y + p.h + 30);
-      ctx.fillStyle = enJeu === null ? '#ccc' : '#ffdc00';
+      ctx.fillStyle = enJeu === null ? '#ccc' : bonus ? '#ff9f1a' : '#ffdc00';
       ctx.fillText(texte, x, p.y + p.h + 30);
       ctx.restore();
     }

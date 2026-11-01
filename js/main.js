@@ -8,7 +8,7 @@ import { chargerDetecteur, detecter } from './detector.js';
 import { creerRendu } from './render.js';
 import { creerSuivi } from './tracker.js';
 import { versGris, estimerDecalage } from './flow.js';
-import { nouvelEtat, debloquerTir, finSerie, serieTerminee, voirFeu, quitterFeu, tirer, serieEntamee } from './game.js';
+import { nouvelEtat, debloquerTir, finSerie, serieTerminee, multiplicateur, voirFeu, quitterFeu, tirer, serieEntamee } from './game.js';
 import { cadrage, letterbox, versEcran, plusProcheDe, ronds, zoneDetection, placementVideo, distanceFeu, pointsPourDistance } from './geometry.js';
 
 const URL_MODELE = 'models/yolo11n/model.json';
@@ -276,7 +276,8 @@ function lancerPartie(entree) {
     if (cible || serieEntamee(etat)) rendu.cartouches(etat.cartouches);
     const age = t - dernierTir.t;
     const rebond = dernierTir.resultat === 'touche' && age < DUREE_REBOND_MS ? 1 - age / DUREE_REBOND_MS : 0;
-    rendu.points(etat.score, cible, pointsEnJeu, rebond);
+    const bonus = multiplicateur(etat);
+    rendu.points(etat.score, cible, pointsEnJeu === null ? null : pointsEnJeu * bonus, rebond, bonus > 1);
     rendu.retourTir(dernierTir, cible, age / DUREE_RETOUR_MS);
     if (cible && serieTerminee(etat)) rendu.message('Plus de cartouches');
     else if (!cible && !serieTerminee(etat)) rendu.message(serieEntamee(etat) ? 'Retrouvez le feu…' : 'Cherchez un feu…');
