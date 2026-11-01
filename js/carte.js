@@ -18,9 +18,11 @@ export function projeter(positions, largeur, hauteur, marge = 24) {
   return positions.map((_, i) => ({ x: ox + (xs[i] - x0) * echelle, y: oy + (ys[i] - y0) * echelle }));
 }
 
-// Dessine le tracé de resume (voir parcours.js) dans le canvas : départ vert, arrivée rouge,
-// pas de tir numérotés (vert si au moins une touche, orange sinon).
-export function dessinerCarte(canvas, resume) {
+// Dessine le tracé de resume (voir parcours.js) dans le canvas, qui occupe tout l'écran :
+// fond quadrillé, tracé doré lumineux, départ vert, arrivée rouge, pas de tir en cibles numérotées
+// (cœur vert si au moins une touche, orange sinon). `haut` et `bas` : bandes (px) réservées aux
+// éléments posés par-dessus (score, chiffres, bouton), où le tracé ne passe pas.
+export function dessinerCarte(canvas, resume, { haut = 0, bas = 0 } = {}) {
   const dpr = window.devicePixelRatio || 1;
   const l = canvas.clientWidth;
   const h = canvas.clientHeight;
@@ -28,41 +30,62 @@ export function dessinerCarte(canvas, resume) {
   canvas.height = Math.round(h * dpr);
   const ctx = canvas.getContext('2d');
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  ctx.fillStyle = '#111';
+  ctx.fillStyle = '#0d1117';
   ctx.fillRect(0, 0, l, h);
+  ctx.strokeStyle = '#1a212b';
+  ctx.lineWidth = 1;
+  for (let x = 0; x <= l; x += 37.5) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, h); ctx.stroke(); }
+  for (let y = 0; y <= h; y += 37.5) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(l, y); ctx.stroke(); }
+
   const tout = [...resume.points, ...resume.tirs];
-  const xy = projeter(tout, l, h);
+  const zoneH = Math.max(60, h - haut - bas);
+  const xy = projeter(tout, l, zoneH, 36).map((p) => ({ x: p.x, y: p.y + haut }));
   if (!xy.length) return;
   const trace = xy.slice(0, resume.points.length);
   const pas = xy.slice(resume.points.length);
 
   ctx.lineJoin = 'round';
   ctx.lineCap = 'round';
-  ctx.lineWidth = 4;
+  const tracer = () => {
+    ctx.beginPath();
+    trace.forEach((p, i) => (i ? ctx.lineTo(p.x, p.y) : ctx.moveTo(p.x, p.y)));
+    ctx.stroke();
+  };
+  ctx.save();
+  ctx.globalAlpha = 0.4;
+  ctx.shadowColor = '#d4a017';
+  ctx.shadowBlur = 14;
   ctx.strokeStyle = '#d4a017';
-  ctx.beginPath();
-  trace.forEach((p, i) => (i ? ctx.lineTo(p.x, p.y) : ctx.moveTo(p.x, p.y)));
-  ctx.stroke();
+  ctx.lineWidth = 10;
+  tracer();
+  ctx.restore();
+  ctx.strokeStyle = '#e8b923';
+  ctx.lineWidth = 5;
+  tracer();
 
-  const rond = (p, couleur, rayon, texte) => {
+  const rond = (p, couleur, rayon) => {
     ctx.beginPath();
     ctx.arc(p.x, p.y, rayon, 0, 2 * Math.PI);
     ctx.fillStyle = couleur;
     ctx.fill();
     ctx.strokeStyle = '#000';
-    ctx.lineWidth = 2;
+    ctx.lineWidth = 2.5;
     ctx.stroke();
-    if (texte) {
-      ctx.fillStyle = '#000';
-      ctx.font = '700 12px -apple-system, system-ui, sans-serif';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText(texte, p.x, p.y + 0.5);
-    }
   };
   if (trace.length) {
-    rond(trace[0], '#2ecc40', 7);
-    rond(trace[trace.length - 1], '#ff4136', 7);
+    rond(trace[0], '#2ecc40', 9);
+    rond(trace[trace.length - 1], '#ff4136', 9);
   }
-  pas.forEach((p, i) => rond(p, resume.tirs[i].touches > 0 ? '#2ecc40' : '#ff851b', 11, String(i + 1)));
+  pas.forEach((p, i) => {
+    rond(p, '#fff', 17);
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, 11, 0, 2 * Math.PI);
+    ctx.fillStyle = resume.tirs[i].touches > 0 ? '#2ecc40' : '#ff851b';
+    ctx.fill();
+    ctx.fillStyle = '#000';
+    ctx.font = '700 14px -apple-system, system-ui, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(String(i + 1), p.x, p.y + 0.5);
+  });
 }

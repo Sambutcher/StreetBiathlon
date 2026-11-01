@@ -37,10 +37,10 @@ html, body {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 12px;
+  gap: 14px;
   padding: max(16px, env(safe-area-inset-top)) 16px max(16px, env(safe-area-inset-bottom));
   text-align: center;
-  background: #000;
+  background: radial-gradient(120% 70% at 50% 28%, #1b2330 0%, #0a0d12 62%, #000 100%);
   overflow: hidden;
 }
 
@@ -50,25 +50,70 @@ html, body {
 
 h1 {
   margin: 0;
-  font-size: 32px;
+  font-size: 40px;
+  line-height: 1;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+h1 span {
+  display: block;
+  margin-bottom: 6px;
+  color: #d4a017;
+  font-size: 17px;
+  letter-spacing: 0.5em;
 }
 
 #accueil p {
   margin: 0;
-  color: #bbb;
+  color: #aab3c0;
+}
+
+/* Cible verticale de biathlon : les trois ronds blanchissent pendant le chargement. */
+#cible-accueil {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin: 6px 0;
+  padding: 18px 22px;
+  border: 3px solid;
+  border-color: #fff #bdbdb4 #a9a9a0 #f8f8f4;
+  border-radius: 6px;
+  background: #ecece6;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6), 3px 4px 8px rgba(0, 0, 0, 0.45);
+}
+
+#cible-accueil i {
+  display: block;
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: #111;
+  box-shadow: inset 0 3px 6px rgba(0, 0, 0, 0.6), 0 0 0 2px #1d1d1d;
+  transition: background 0.15s, box-shadow 0.15s;
+}
+
+#cible-accueil i.blanc {
+  background: #fff;
+  box-shadow: 0 0 0 2px #a8a8a0;
 }
 
 #demarrer {
-  margin-top: 16px;
-  padding: 14px 40px;
+  padding: 15px 44px;
   border: 0;
   border-radius: 999px;
   background: #fff;
   color: #000;
-  font: 600 18px -apple-system, system-ui, sans-serif;
+  font: 700 20px -apple-system, system-ui, sans-serif;
+  transition: background 0.2s, transform 0.2s;
 }
 
-#demarrer:disabled {
+#demarrer.pret {
+  background: #2ecc40;
+  transform: scale(1.06);
+}
+
+#demarrer:disabled:not(.pret) {
   opacity: 0.5;
 }
 
@@ -111,6 +156,18 @@ h1 {
   font: 700 22px -apple-system, system-ui, sans-serif;
 }
 
+#position-tir:not(:disabled) {
+  animation: pouls 1s ease-in-out infinite;
+}
+
+@keyframes pouls {
+  50% { transform: scale(1.025); box-shadow: 0 0 0 8px rgba(46, 204, 64, 0.18); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #position-tir:not(:disabled) { animation: none; }
+}
+
 #position-tir:disabled {
   background: #333;
   color: #777;
@@ -146,39 +203,18 @@ h1 {
   font: 600 15px -apple-system, system-ui, sans-serif;
 }
 
-#suivi {
-  display: flex;
-  gap: 32px;
-  margin-top: 4px;
-  font-variant-numeric: tabular-nums;
-}
-
-#suivi div {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-}
-
-#suivi span {
-  color: #999;
-  font-size: 12px;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-}
-
-#suivi strong {
-  font: 700 28px -apple-system, system-ui, sans-serif;
-  color: #fff;
+.cache {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
 }
 
 #recap {
   position: fixed;
   inset: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  padding: max(16px, env(safe-area-inset-top)) 16px max(16px, env(safe-area-inset-bottom));
-  background: #000;
+  background: #0d1117;
   overflow: hidden;
 }
 
@@ -186,57 +222,105 @@ h1 {
   display: none;
 }
 
-#recap h2 {
-  margin: 0;
-  text-align: center;
-  font-size: 24px;
+#carte {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
 }
 
+#recap-score {
+  position: absolute;
+  top: max(34px, calc(env(safe-area-inset-top) + 12px));
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 6px 22px 8px;
+  border: 1px solid #333c48;
+  border-radius: 999px;
+  background: rgba(8, 10, 14, 0.82);
+  text-align: center;
+}
+
+#recap-score span {
+  display: block;
+  color: #8b95a3;
+  font-size: 10px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+
+#recap-score strong {
+  color: #d4a017;
+  font: 700 36px/1.1 -apple-system, system-ui, sans-serif;
+}
+
+#legende {
+  position: absolute;
+  left: 14px;
+  top: max(100px, calc(env(safe-area-inset-top) + 78px));
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  color: #aab3c0;
+  font-size: 11px;
+}
+
+#legende i {
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  margin-right: 6px;
+  border-radius: 50%;
+}
+
+#legende .depart { background: #2ecc40; }
+#legende .arrivee { background: #ff4136; }
+#legende .tir { background: #fff; box-shadow: 0 0 0 2px #2ecc40; }
+
 #recap-chiffres {
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  bottom: calc(max(14px, env(safe-area-inset-bottom)) + 62px);
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 8px;
+  gap: 6px;
   margin: 0;
 }
 
 #recap-chiffres div {
-  padding: 8px 12px;
+  padding: 7px 8px 8px;
+  border: 1px solid #2a3039;
   border-radius: 12px;
-  background: #1a1a1a;
-}
-
-#recap-chiffres .large {
-  grid-column: 1 / -1;
-  text-align: center;
-}
-
-#recap-chiffres .large dd {
-  font-size: 40px;
-}
-
-#recap-chiffres small {
-  color: #999;
-  font: 500 12px -apple-system, system-ui, sans-serif;
+  background: rgba(8, 10, 14, 0.78);
 }
 
 #recap-chiffres dt {
-  color: #999;
-  font-size: 12px;
+  color: #8b95a3;
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
 }
 
 #recap-chiffres dd {
   margin: 2px 0 0;
-  font: 700 18px -apple-system, system-ui, sans-serif;
+  font: 700 19px/1.15 -apple-system, system-ui, sans-serif;
 }
 
-#carte {
-  flex: 1 1 0;
-  width: 100%;
-  min-height: 0;
-  border-radius: 12px;
+#recap-chiffres small {
+  margin-left: 3px;
+  color: #8b95a3;
+  font: 500 12px -apple-system, system-ui, sans-serif;
 }
 
 #nouvelle-partie {
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  bottom: max(14px, env(safe-area-inset-bottom));
   padding: 16px;
   border: 0;
   border-radius: 16px;

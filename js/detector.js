@@ -8,15 +8,19 @@ const SEUIL_IOU = 0.45;
 
 let modele = null;
 
-export async function chargerDetecteur(url) {
+// progression(n) est appelée à 1, 2 puis 3 : moteur WebGL prêt, modèle chargé, shaders compilés.
+export async function chargerDetecteur(url, progression = () => {}) {
   // Mémoire graphique de l'iPhone SE à la limite : textures libérées aussitôt, pas gardées en réserve.
   tf.env().set('WEBGL_DELETE_TEXTURE_THRESHOLD', 0);
   await tf.setBackend('webgl');
   await tf.ready();
+  progression(1);
   modele = await tf.loadGraphModel(url);
+  progression(2);
   const [, hauteur, largeur] = modele.inputs[0].shape;
   // Première inférence à vide : compile les shaders WebGL avant la partie.
   tf.tidy(() => modele.execute(tf.zeros([1, hauteur, largeur, 3])));
+  progression(3);
   return { largeur, hauteur };
 }
 
