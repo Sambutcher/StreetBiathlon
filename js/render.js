@@ -247,6 +247,16 @@ export function creerRendu(canvas) {
     ctx.globalAlpha = 1 - age * age;
     if (tir.resultat === 'touche') {
       if (tir.gain > 0) pastille(`+${tir.gain}`, x, y - 30 - age * 70, '700 30px -apple-system, system-ui, sans-serif', '#2ecc40');
+    } else if (tir.sansCible) {
+      // Tir dans le vide : grosse croix fixe au centre de l'écran.
+      ctx.strokeStyle = '#ff4136';
+      ctx.lineWidth = 22;
+      ctx.lineCap = 'round';
+      const r = Math.min(largeur, hauteur) * 0.25;
+      ctx.beginPath();
+      ctx.moveTo(largeur / 2 - r, hauteur / 2 - r); ctx.lineTo(largeur / 2 + r, hauteur / 2 + r);
+      ctx.moveTo(largeur / 2 + r, hauteur / 2 - r); ctx.lineTo(largeur / 2 - r, hauteur / 2 + r);
+      ctx.stroke();
     } else {
       // Même emplacement et même montée que le « +N » d'une touche.
       ctx.strokeStyle = '#ff4136';

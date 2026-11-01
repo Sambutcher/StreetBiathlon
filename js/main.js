@@ -4,6 +4,8 @@
 import { demarrerCamera, arreterCamera, relancerAuRetour } from './camera.js';
 import { suivrePosition, garderEcranAllume } from './position.js';
 import { creerCourse } from './course.js';
+import { creerParcours, formaterDuree, formaterDistance, formaterSecondes, statistiques } from './parcours.js';
+import { dessinerCarte } from './carte.js';
 import { chargerDetecteur, detecter } from './detector.js';
 import { creerRendu } from './render.js';
 import * as son from './son.js';
@@ -15,6 +17,7 @@ import { cadrage, letterbox, versEcran, plusProcheDe, ronds, zoneDetection, plac
 const URL_MODELE = 'models/yolo11n/model.json';
 const ZOOM = 2; // zoom numérique de l'image affichée
 const INTERVALLE_DETECTION_MS = 80;
+const INTERVALLE_RENDU_COURSE_MS = 500; // écran de course, caméra éteinte
 const LARGEUR_FLUX = 120; // largeur de l'image réduite pour le flux optique
 const RAYON_FLUX = 12; // déplacement max mesuré par trame, en pixels de l'image réduite
 const DISTANCE_COURSE = 100; // mètres à vol d'oiseau pour débloquer le tir
@@ -37,6 +40,17 @@ const pasDeTir = document.getElementById('pas-de-tir');
 const boutonTir = document.getElementById('position-tir');
 const erreurCamera = document.getElementById('erreur-camera');
 const boutonSkip = document.getElementById('skip');
+const boutonFin = document.getElementById('fin-course');
+const suiviTemps = document.getElementById('suivi-temps');
+const suiviDistance = document.getElementById('suivi-distance');
+const recap = document.getElementById('recap');
+const recapChiffres = document.getElementById('recap-chiffres');
+document.getElementById('nouvelle-partie').addEventListener('click', () => location.reload());
+
+// Pas de zoom : iOS ignore user-scalable=no, le pincement se bloque par gesturestart.
+for (const ev of ['gesturestart', 'gesturechange', 'gestureend']) {
+  document.addEventListener(ev, (e) => e.preventDefault());
+}
 
 if ('serviceWorker' in navigator) {
   // Mise à jour : sw.js jamais pris dans le cache HTTP (GitHub Pages le garde 10 min), vérifié à
@@ -73,9 +87,12 @@ function lancerPartie(entree) {
 
   // --- Course : GPS actif toute la partie ; le tir se débloque à DISTANCE_COURSE du départ. ---
   const course = creerCourse({ distance: DISTANCE_COURSE });
+  const debutPartie = Date.now();
+  const parcours = creerParcours(debutPartie);
+  let partieFinie = false;
   let alerteGps = null;
-  suivrePosition(
-    (fix) => { alerteGps = null; course.ajouter(fix); },
+  const arreterGps = suivrePosition(
+    (fix) => { alerteGps = null; parcours.ajouter(fix); course.ajouter(fix); },
     (message) => { alerteGps = message; },
     { simulation: SIMGPS },
   );
@@ -91,6 +108,7 @@ function lancerPartie(entree) {
   let cible = null; // boîte écran du feu quand il est visible
   let allumageCamera = false;
   let finSerieA = null; // instant de la 3e balle
+  let dernierEvenementTir = 0; // affichage de la caméra, puis chaque tir : pour le temps moyen par tir
   let tirDebloqueSonne = false; // le bip « 100 m faits » n'est joué qu'une fois par course
   relancerAuRetour(video);
 
@@ -107,7 +125,7 @@ function lancerPartie(entree) {
   } catch (e) {
     console.warn('Contexte de TensorFlow non surveillé :', e);
   }
-  let dernierTir = { resultat: null, t: -Infinity, gain: 0 };
+  let dernierTir = { resultat: null, t: -Infinity, gain: 0, sansCible: false };
   let distance = null; // distance estimée au feu visible (m)
   let pointsEnJeu = null; // points que rapporterait une touche sur ce feu
 
@@ -117,6 +135,8 @@ function lancerPartie(entree) {
   const ctxEntree = canvasEntree.getContext('2d', { willReadFrequently: true });
   let detectionEnCours = false;
   let derniereDetection = 0;
+  let dernierRendu = 0; // dernier dessin de l'écran de course (économie de batterie)
+  let dernierEtatRendu = '';
   let cycleDetection = 0;
   let zoneAnalysee = null;
 
@@ -147,17 +167,45 @@ function lancerPartie(entree) {
     cible = null;
     zoneAnalysee = null;
     etat = debloquerTir(etat);
+    dernierEvenementTir = performance.now();
+    parcours.enregistrerDebutSerie(Date.now());
     pasDeTir.hidden = true;
+  });
+
+  // « Fin de course » : arrête GPS et jeu, affiche le récapitulatif (chiffres + carte du parcours).
+  boutonFin.addEventListener('click', () => {
+    if (!confirm('Terminer la course ?')) return;
+    partieFinie = true;
+    arreterGps();
+    arreterCamera(video);
+    pasDeTir.hidden = true;
+    const resume = parcours.resume(Date.now());
+    const st = statistiques(resume, etat.score);
+    const ligne = (nom, valeur, classe = '') => `<div class="${classe}"><dt>${nom}</dt><dd>${valeur}</dd></div>`;
+    const duree = (ms) => (ms === null ? '—' : formaterDuree(ms));
+    recapChiffres.innerHTML = [
+      ligne('Score', `${st.score} pts`, 'large'),
+      ligne('Distance', formaterDistance(resume.distance)),
+      ligne('Temps', formaterDuree(resume.duree)),
+      ligne('Vitesse', st.vitesseKmh === null ? '—' : `${st.vitesseKmh.toFixed(1).replace('.', ',')} km/h`),
+      ligne('Tirs réussis', st.tirs ? `${st.touches}/${st.tirs} <small>${st.reussite} %</small>` : '—'),
+      ligne('Temps / tir', st.tempsMoyenTir === null ? '—' : formaterSecondes(st.tempsMoyenTir)),
+      ligne('Temps / tour', duree(st.tempsMoyenTour)),
+    ].join('');
+    recap.hidden = false;
+    dessinerCarte(document.getElementById('carte'), resume);
   });
 
   // Série terminée : caméra coupée, nouvelle course depuis la position actuelle.
   function passerEnCourse() {
     arreterCamera(video);
     etat = finSerie(etat);
+    parcours.marquerTir(etat.derniereSerie);
     cible = null;
     finSerieA = null;
     tirDebloqueSonne = false;
     course.demarrer(Date.now());
+    dernierEtatRendu = '';
     erreurCamera.textContent = '';
     pasDeTir.hidden = false;
   }
@@ -166,13 +214,15 @@ function lancerPartie(entree) {
   canvas.addEventListener('pointerdown', (ev) => {
     ev.preventDefault();
     if (serieTerminee(etat)) { son.vide(); return; }
-    if (!cible) return;
     const bonus = multiplicateur(etat) > 1;
     const r = tirer(etat, cible, { x: rendu.largeur / 2, y: rendu.hauteur / 2 }, pointsEnJeu ?? 0);
     etat = r.etat;
     if (r.resultat) {
-      dernierTir = { resultat: r.resultat, t: performance.now(), gain: r.gain };
-      son.tir();
+      dernierTir = { resultat: r.resultat, t: performance.now(), gain: r.gain, sansCible: Boolean(r.sansCible) };
+      parcours.enregistrerDelai(dernierTir.t - dernierEvenementTir);
+      dernierEvenementTir = dernierTir.t;
+      if (r.sansCible) son.bug();
+      else son.tir();
       if (r.resultat === 'touche') (bonus ? son.bonus : son.touche)(); // raté : le coup de feu seul
     }
     if (serieTerminee(etat) && finSerieA === null) finSerieA = performance.now();
@@ -253,8 +303,16 @@ function lancerPartie(entree) {
     ctx.restore();
   }
 
-  function imageCourse() {
+  // L'écran de course change à peine : redessiné 2 fois par seconde, ou aussitôt si la phase
+  // ou l'alerte change (bouton « Position de tir », son « tir débloqué »).
+  function imageCourse(t) {
     const e = course.etat();
+    const cle = `${e.phase}|${alerteGps}|${allumageCamera}|${etat.score}`;
+    if (cle === dernierEtatRendu && t - dernierRendu < INTERVALLE_RENDU_COURSE_MS) return;
+    dernierEtatRendu = cle;
+    dernierRendu = t;
+    suiviTemps.textContent = formaterDuree(Date.now() - debutPartie);
+    suiviDistance.textContent = formaterDistance(parcours.distance());
     if (e.phase === 'fini' && !tirDebloqueSonne) {
       tirDebloqueSonne = true;
       son.tirDebloque();
@@ -285,14 +343,12 @@ function lancerPartie(entree) {
 
     const bonus = multiplicateur(etat);
     rendu.video(video, c);
-    if (cible) {
-      rendu.cible(cible, ronds(cible), etat.touches, etat.impacts, bonus > 1);
-      rendu.viseur();
-    }
-    if (cible || serieEntamee(etat)) rendu.cartouches(etat.cartouches);
+    if (cible) rendu.cible(cible, ronds(cible), etat.touches, etat.impacts, bonus > 1);
+    rendu.viseur();
+    rendu.cartouches(etat.cartouches);
     const age = t - dernierTir.t;
     const rebond = dernierTir.resultat === 'touche' && age < DUREE_REBOND_MS ? 1 - age / DUREE_REBOND_MS : 0;
-    rendu.points(etat.score, cible, pointsEnJeu === null ? null : pointsEnJeu * bonus, rebond);
+    rendu.points(etat.score, serieTerminee(etat) ? null : cible, pointsEnJeu === null ? null : pointsEnJeu * bonus, rebond);
     rendu.retourTir(dernierTir, cible, age / DUREE_RETOUR_MS);
     if (cible && serieTerminee(etat)) rendu.message('Plus de cartouches');
     else if (!cible && !serieTerminee(etat)) rendu.message(serieEntamee(etat) ? 'Retrouvez le feu…' : 'Cherchez un feu…');
@@ -326,6 +382,7 @@ function lancerPartie(entree) {
   }
 
   function image(t) {
+    if (partieFinie) return;
     if (contextePerdu) {
       rendu.effacer();
       rendu.message('Mémoire saturée, redémarrage…');
@@ -333,7 +390,7 @@ function lancerPartie(entree) {
       return;
     }
     if (finSerieA !== null && t - finSerieA > DELAI_FIN_SERIE_MS) passerEnCourse();
-    if (etat.phase === 'course') imageCourse();
+    if (etat.phase === 'course') imageCourse(t);
     else imageTir(t);
     requestAnimationFrame(image);
   }

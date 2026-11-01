@@ -23,12 +23,23 @@
     <p id="erreur-camera"></p>
     <button id="position-tir" type="button" disabled>Position de tir</button>
     <button id="skip" type="button" hidden>Skip</button>
+    <div id="suivi">
+      <div><span>Temps</span><strong id="suivi-temps">0:00</strong></div>
+      <div><span>Parcouru</span><strong id="suivi-distance">0 m</strong></div>
+    </div>
+    <button id="fin-course" type="button">Fin de course</button>
+  </div>
+  <div id="recap" hidden>
+    <h2>Statistiques</h2>
+    <dl id="recap-chiffres"></dl>
+    <canvas id="carte"></canvas>
+    <button id="nouvelle-partie" type="button">Nouvelle partie</button>
   </div>
   <div id="accueil">
     <h1>Street Biathlon</h1>
-    <button id="demarrer" type="button">Démarrer</button>
+    <button id="demarrer" type="button">Top départ!</button>
     <p id="statut"></p>
-    <p id="version">v1.2.3</p>
+    <p id="version">v1.3.5</p>
   </div>
 </body>
 </html>
