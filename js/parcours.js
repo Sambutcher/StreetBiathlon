@@ -95,9 +95,10 @@ export function statistiques(resume, score) {
     reussite: tirsTotal ? Math.round((touches / tirsTotal) * 100) : null,
     meilleureSerie: series ? Math.max(...resume.tirs.map((t) => t.points)) : null,
     tempsMoyenTir: resume.delais && resume.delais.length ? resume.delais.reduce((a, b) => a + b, 0) / resume.delais.length : null,
-    // Temps moyen d'un tour : écart moyen entre les débuts de deux séquences de tir successives.
-    tempsMoyenTour: resume.debutsSeries && resume.debutsSeries.length > 1
-      ? (resume.debutsSeries[resume.debutsSeries.length - 1] - resume.debutsSeries[0]) / (resume.debutsSeries.length - 1)
+    // Temps moyen d'un tour : la course est découpée par les débuts de séquence de tir, en comptant
+    // départ → 1er tir et dernier tir → arrivée : n séquences font n + 1 tronçons.
+    tempsMoyenTour: resume.debutsSeries && resume.debutsSeries.length > 0
+      ? resume.duree / (resume.debutsSeries.length + 1)
       : null,
     allure: allure(resume.duree, resume.distance),
     vitesseKmh: heures > 0 && resume.distance >= 10 ? resume.distance / 1000 / heures : null,
