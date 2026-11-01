@@ -188,8 +188,8 @@ export function creerRendu(canvas) {
     ctx.restore();
   }
 
-  // Score global (haut à droite) et points en jeu pour le feu visé (dessous), null sans feu.
-  function points(score, enJeu) {
+  // Score global (haut à droite) et, sous la plaque de `boite` (null sans feu), les points en jeu.
+  function points(score, boite, enJeu) {
     ctx.save();
     ctx.textAlign = 'right';
     ctx.textBaseline = 'top';
@@ -198,10 +198,12 @@ export function creerRendu(canvas) {
     ctx.fillStyle = '#fff';
     ctx.font = '700 32px -apple-system, system-ui, sans-serif';
     ctx.fillText(`${score} pts`, largeur - 16, margeHaut + 16);
-    if (enJeu !== null) {
+    if (boite) {
+      const p = plaque(boite);
+      ctx.textAlign = 'center';
       ctx.fillStyle = '#ffdc00';
-      ctx.font = '600 20px -apple-system, system-ui, sans-serif';
-      ctx.fillText(`+${enJeu}`, largeur - 16, margeHaut + 54);
+      ctx.font = '700 28px -apple-system, system-ui, sans-serif';
+      ctx.fillText(`${enJeu}`, Math.min(Math.max(boite.x + boite.w / 2, 24), largeur - 24), p.y + p.h + 6);
     }
     ctx.restore();
   }

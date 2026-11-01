@@ -272,7 +272,7 @@ function lancerPartie(entree) {
       rendu.viseur();
     }
     if (cible || serieEntamee(etat)) rendu.cartouches(etat.cartouches);
-    rendu.points(etat.score, pointsEnJeu);
+    rendu.points(etat.score, cible, pointsEnJeu);
     if (cible && serieTerminee(etat)) rendu.message('Plus de cartouches');
     else if (!cible && !serieTerminee(etat)) rendu.message(serieEntamee(etat) ? 'Retrouvez le feu…' : 'Cherchez un feu…');
 
