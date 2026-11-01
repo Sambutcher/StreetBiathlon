@@ -4,6 +4,8 @@
 }
 
 html, body {
+  touch-action: manipulation; /* pas de zoom au double tap */
+  overscroll-behavior: none;
   margin: 0;
   height: 100%;
   overflow: hidden;
@@ -39,6 +41,7 @@ html, body {
   padding: max(16px, env(safe-area-inset-top)) 16px max(16px, env(safe-area-inset-bottom));
   text-align: center;
   background: #000;
+  overflow: hidden;
 }
 
 #accueil[hidden] {
@@ -132,4 +135,112 @@ h1 {
   color: #ff6b5b;
   font-size: 14px;
   text-align: center;
+}
+
+#fin-course {
+  padding: 8px 24px;
+  border: 1px solid #555;
+  border-radius: 12px;
+  background: transparent;
+  color: #bbb;
+  font: 600 15px -apple-system, system-ui, sans-serif;
+}
+
+#suivi {
+  display: flex;
+  gap: 32px;
+  margin-top: 4px;
+  font-variant-numeric: tabular-nums;
+}
+
+#suivi div {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+#suivi span {
+  color: #999;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+#suivi strong {
+  font: 700 28px -apple-system, system-ui, sans-serif;
+  color: #fff;
+}
+
+#recap {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: max(16px, env(safe-area-inset-top)) 16px max(16px, env(safe-area-inset-bottom));
+  background: #000;
+  overflow: hidden;
+}
+
+#recap[hidden] {
+  display: none;
+}
+
+#recap h2 {
+  margin: 0;
+  text-align: center;
+  font-size: 24px;
+}
+
+#recap-chiffres {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin: 0;
+}
+
+#recap-chiffres div {
+  padding: 8px 12px;
+  border-radius: 12px;
+  background: #1a1a1a;
+}
+
+#recap-chiffres .large {
+  grid-column: 1 / -1;
+  text-align: center;
+}
+
+#recap-chiffres .large dd {
+  font-size: 40px;
+}
+
+#recap-chiffres small {
+  color: #999;
+  font: 500 12px -apple-system, system-ui, sans-serif;
+}
+
+#recap-chiffres dt {
+  color: #999;
+  font-size: 12px;
+}
+
+#recap-chiffres dd {
+  margin: 2px 0 0;
+  font: 700 18px -apple-system, system-ui, sans-serif;
+}
+
+#carte {
+  flex: 1 1 0;
+  width: 100%;
+  min-height: 0;
+  border-radius: 12px;
+}
+
+#nouvelle-partie {
+  padding: 16px;
+  border: 0;
+  border-radius: 16px;
+  background: #fff;
+  color: #000;
+  font: 700 18px -apple-system, system-ui, sans-serif;
 }

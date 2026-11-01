@@ -23,10 +23,14 @@ test('position de tir : 3 cartouches et cible vierge', () => {
   assert.deepEqual(etat.impacts, []);
 });
 
-test('pas de tir sans feu visible', () => {
-  const { etat, resultat } = tirer(enPosition(), cible, haut);
-  assert.equal(resultat, null);
-  assert.equal(etat.cartouches, CARTOUCHES);
+test('tir sans feu visible : raté sans cible, cartouche perdue', () => {
+  const { etat, resultat, sansCible, gain } = tirer(enPosition(), null, haut);
+  assert.equal(resultat, 'rate');
+  assert.equal(sansCible, true);
+  assert.equal(gain, 0);
+  assert.equal(etat.cartouches, CARTOUCHES - 1);
+  assert.deepEqual(etat.impacts, []);
+  assert.equal(tirer(nouvelEtat(), null, haut).resultat, null, 'pas de tir pendant la course');
 });
 
 test('touché blanchit le rond et consomme une cartouche', () => {
@@ -64,7 +68,7 @@ test('la série survit à la perte du feu tant qu\'il reste des balles', () => {
   assert.equal(etat.cibleVisible, false);
   assert.equal(etat.cartouches, 2);
   assert.deepEqual(etat.touches, [true, false, false]);
-  assert.equal(tirer(etat, cible, haut).resultat, null, 'tap sans feu ignoré');
+  assert.equal(tirer(etat, cible, haut).sansCible, true, 'tap sans feu : raté dans le vide');
   etat = voirFeu(etat);
   assert.deepEqual(etat.touches, [true, false, false], 'ronds conservés au retour');
 });

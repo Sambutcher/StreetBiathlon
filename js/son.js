@@ -92,3 +92,10 @@ export function tirDebloque() {
   note(880, 0, 0.11, { type: 'square', volume: 0.12 });
   note(880, 0.17, 0.11, { type: 'square', volume: 0.12 });
 }
+
+// Tir sans cible : « bug » d'ordinateur, buzz carré qui chute en trois saccades.
+export function bug() {
+  if (!pret()) return;
+  [0, 0.11, 0.22].forEach((d, i) => note(300 - i * 70, d, 0.09, { type: 'sawtooth', fin: 90, volume: 0.22 }));
+  bruit(0.05, 0.25, { filtre: 'highpass', freq: 3000, volume: 0.12 });
+}

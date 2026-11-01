@@ -6,7 +6,7 @@
   → tir de 3 balles → course… Tester sans courir avec `?simgps` (bouton « Skip » : course faite d'un coup), diagnostic avec `?debug`.
 - Détection : YOLO11n converti en TF.js, `vendor/tf.min.js` 4.22.0. Le PC de dev n'a pas l'AVX :
   la conversion passe par le workflow manuel `export-model.yml` (ultralytics < 8.4).
-- Logique pure (`js/game.js`, `js/geometry.js`, `js/tracker.js`, `js/flow.js`, `js/course.js`)
+- Logique pure (`js/game.js`, `js/geometry.js`, `js/tracker.js`, `js/flow.js`, `js/course.js`, `js/parcours.js`, `js/carte.js`)
   testée par `node --test tests/` (Node 18 apt, pas de npm). Garder le DOM et `tf` hors de ces modules.
 - Vidéo : toujours dessinée entière (`placementVideo` de `js/geometry.js`), jamais découpée (bug
   du « quart d'image » sur iOS). Ne pas surveiller `video.currentTime` : avec un flux caméra,
@@ -19,6 +19,7 @@
 - Mise en ligne : GitHub Pages sur `main` (https://sambutcher.github.io/StreetBiathlon/),
   merge fait par Samuel ; release `vX.Y.Z` ensuite.
 - Sons : `js/son.js`, Web Audio synthétisé (pas de fichiers), coupé par le commutateur silencieux d'iOS ; contexte créé sur clic (Démarrer, Position de tir). Pas de bouton on/off. Impossible à tester sans iPhone : timbres réglés à l'oreille par Samuel.
-- Feuille de route : v1.0.0 = tir + course. v1.1.0 = points (1 point par mètre estimé au feu, FOV à calibrer avec ?debug). À venir : chrono (pénalités ?), historique.
+- Batterie : l'écran de course n'est redessiné que 2 fois/s (`INTERVALLE_RENDU_COURSE_MS`) ; pas de veille écran en course (iOS couperait le GPS).
+- Feuille de route : v1.0.0 = tir + course. v1.1.0 = points (1 point par mètre estimé au feu, FOV à calibrer avec ?debug). v1.3.x = suivi (chrono, distance parcourue) et récap de « Fin de course » avec carte sans fond de plan. À venir : pénalités ?, historique persistant.
 - Ne pas tester les pages dans Chromium : Samuel teste lui-même (navigateur, iPhone).
 - Langue du code et des textes : français.

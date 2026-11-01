@@ -18,20 +18,29 @@ export function suivrePosition(rappel, rappelErreur, { simulation = false } = {}
   return () => navigator.geolocation.clearWatch(id);
 }
 
-// Course simulée vers le nord à ~3 m/s, bruit de ±2 m, une position par seconde.
+// Nouveau cap (degrés, 0 = nord, > 0 vers l'est) après un pas de 3 m : variation aléatoire
+// entre -0,5° et +2,5° (moyenne +1°/pas : un tour complet en ~1 km). `aleatoire` renvoie un nombre dans [0, 1[.
+export function pasSimule(cap, aleatoire = Math.random) {
+  return cap - 0.5 + 3 * aleatoire();
+}
+
+// Course simulée à ~3 m/s, une position par seconde (un pas de 3 m), cap qui dérive à chaque pas
+// depuis le nord, bruit de ±2 m sur la position rapportée.
 function simulerCourse(rappel) {
   const depart = { lat: 48.8566, lon: 2.3522 };
-  const debut = Date.now();
   const bruit = () => (Math.random() - 0.5) * 4;
+  let cap = 0;
+  let nord = 0;
+  let est = 0;
   const id = setInterval(() => {
-    const t = Date.now();
-    const nord = ((t - debut) / 1000) * 3 + bruit();
-    const est = bruit();
+    cap = pasSimule(cap);
+    nord += 3 * Math.cos((cap * Math.PI) / 180);
+    est += 3 * Math.sin((cap * Math.PI) / 180);
     rappel({
-      lat: depart.lat + nord / 111195,
-      lon: depart.lon + est / (111195 * Math.cos((depart.lat * Math.PI) / 180)),
+      lat: depart.lat + (nord + bruit()) / 111195,
+      lon: depart.lon + (est + bruit()) / (111195 * Math.cos((depart.lat * Math.PI) / 180)),
       precision: 8,
-      t,
+      t: Date.now(),
     });
   }, 1000);
   return () => clearInterval(id);
