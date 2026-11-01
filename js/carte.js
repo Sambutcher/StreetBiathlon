@@ -1,6 +1,21 @@
 // Carte du parcours : tracé sur fond noir, sans fond de plan (appli hors ligne, sans service
 // externe). Projection équirectangulaire ajustée au tracé.
 
+// Couleur d'un pas de tir selon les cibles touchées sur 3 : rouge 0, orange 1, jaune 2, vert 3.
+export const COULEURS_PAS = ['#ff4136', '#ff851b', '#ffdc00', '#2ecc40'];
+export const couleurPas = (touches) => COULEURS_PAS[Math.max(0, Math.min(3, touches))];
+
+// Indice du pas de tir `pas` ([{x, y}]) le plus proche de (x, y) à moins de `rayon` px, sinon -1.
+export function pasProche(pas, x, y, rayon = 30) {
+  let meilleur = -1;
+  let dMin = rayon;
+  pas.forEach((p, i) => {
+    const d = Math.hypot(p.x - x, p.y - y);
+    if (d <= dMin) { dMin = d; meilleur = i; }
+  });
+  return meilleur;
+}
+
 // Positions {lat, lon} → points {x, y} dans un rectangle largeur × hauteur, marge comprise,
 // nord en haut, échelle identique sur les deux axes. Un tracé vide donne [], un seul point le centre.
 export function projeter(positions, largeur, hauteur, marge = 24) {
@@ -20,7 +35,8 @@ export function projeter(positions, largeur, hauteur, marge = 24) {
 
 // Dessine le tracé de resume (voir parcours.js) dans le canvas, qui occupe tout l'écran :
 // fond quadrillé, tracé doré lumineux, départ vert, arrivée rouge, pas de tir en cibles numérotées
-// (cœur vert si au moins une touche, orange sinon). `haut` et `bas` : bandes (px) réservées aux
+// (cœur rouge / orange / jaune / vert pour 0 / 1 / 2 / 3 cibles touchées). Renvoie les positions écran
+// des pas de tir ([{x, y}]), pour les rendre cliquables. `haut` et `bas` : bandes (px) réservées aux
 // éléments posés par-dessus (score, chiffres, bouton), où le tracé ne passe pas.
 export function dessinerCarte(canvas, resume, { haut = 0, bas = 0 } = {}) {
   const dpr = window.devicePixelRatio || 1;
@@ -40,7 +56,7 @@ export function dessinerCarte(canvas, resume, { haut = 0, bas = 0 } = {}) {
   const tout = [...resume.points, ...resume.tirs];
   const zoneH = Math.max(60, h - haut - bas);
   const xy = projeter(tout, l, zoneH, 36).map((p) => ({ x: p.x, y: p.y + haut }));
-  if (!xy.length) return;
+  if (!xy.length) return [];
   const trace = xy.slice(0, resume.points.length);
   const pas = xy.slice(resume.points.length);
 
@@ -80,7 +96,7 @@ export function dessinerCarte(canvas, resume, { haut = 0, bas = 0 } = {}) {
     rond(p, '#fff', 17);
     ctx.beginPath();
     ctx.arc(p.x, p.y, 11, 0, 2 * Math.PI);
-    ctx.fillStyle = resume.tirs[i].touches > 0 ? '#2ecc40' : '#ff851b';
+    ctx.fillStyle = couleurPas(resume.tirs[i].touches);
     ctx.fill();
     ctx.fillStyle = '#000';
     ctx.font = '700 14px -apple-system, system-ui, sans-serif';
@@ -88,4 +104,5 @@ export function dessinerCarte(canvas, resume, { haut = 0, bas = 0 } = {}) {
     ctx.textBaseline = 'middle';
     ctx.fillText(String(i + 1), p.x, p.y + 0.5);
   });
+  return pas;
 }
