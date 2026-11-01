@@ -58,11 +58,11 @@ function bruit(debut, duree, { filtre = 'lowpass', freq = 2000, volume = 0.4 } =
   src.stop(t + duree);
 }
 
-// Coup de feu : claquement très bref et sec (bruit aigu + toc court).
+// Coup de feu : claquement sec et sourd.
 export function tir() {
   if (!pret()) return;
-  bruit(0, 0.035, { filtre: 'highpass', freq: 2200, volume: 0.6 });
-  note(180, 0, 0.04, { type: 'triangle', fin: 70, volume: 0.25 });
+  bruit(0, 0.09, { filtre: 'bandpass', freq: 1800, volume: 0.5 });
+  note(140, 0, 0.12, { type: 'triangle', fin: 45, volume: 0.4 });
 }
 
 // Touche : « ting » métallique.
