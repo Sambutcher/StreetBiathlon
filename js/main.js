@@ -173,9 +173,7 @@ function lancerPartie(entree) {
     if (r.resultat) {
       dernierTir = { resultat: r.resultat, t: performance.now(), gain: r.gain };
       son.tir();
-      if (r.resultat === 'rate') son.rate();
-      else if (bonus) son.bonus();
-      else son.touche();
+      if (r.resultat === 'touche') (bonus ? son.bonus : son.touche)(); // raté : le coup de feu seul
     }
     if (serieTerminee(etat) && finSerieA === null) finSerieA = performance.now();
   });

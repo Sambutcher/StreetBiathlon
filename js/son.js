@@ -61,8 +61,8 @@ function bruit(debut, duree, { filtre = 'lowpass', freq = 2000, volume = 0.4 } =
 // Coup de feu : claquement sec et sourd.
 export function tir() {
   if (!pret()) return;
-  bruit(0, 0.09, { filtre: 'bandpass', freq: 1800, volume: 0.5 });
-  note(140, 0, 0.12, { type: 'triangle', fin: 45, volume: 0.4 });
+  bruit(0, 0.09, { filtre: 'bandpass', freq: 1000, volume: 0.55 });
+  note(100, 0, 0.12, { type: 'triangle', fin: 35, volume: 0.45 });
 }
 
 // Touche : « ting » métallique.
@@ -77,13 +77,6 @@ export function bonus() {
   if (!pret()) return;
   [1047, 1319, 1568].forEach((f, i) => note(f, DELAI_IMPACT + i * 0.08, 0.3, { type: 'triangle', volume: 0.22 }));
   note(2093, DELAI_IMPACT + 0.24, 0.6, { volume: 0.2 });
-}
-
-// Raté : souffle sourd et note qui tombe.
-export function rate() {
-  if (!pret()) return;
-  bruit(DELAI_IMPACT, 0.18, { freq: 700, volume: 0.25 });
-  note(300, DELAI_IMPACT, 0.22, { type: 'triangle', fin: 110, volume: 0.15 });
 }
 
 // Détente sans cartouche : clic sec.
