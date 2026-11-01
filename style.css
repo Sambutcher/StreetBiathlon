@@ -173,6 +173,24 @@ h1 span {
   color: #777;
 }
 
+#zoom {
+  position: fixed;
+  left: 16px;
+  bottom: max(24px, env(safe-area-inset-bottom));
+  z-index: 5;
+  min-width: 72px;
+  padding: 14px 20px;
+  border: 2px solid #fff;
+  border-radius: 14px;
+  background: rgba(0, 0, 0, 0.55);
+  color: #fff;
+  font: 700 22px -apple-system, system-ui, sans-serif;
+}
+
+#zoom[hidden] {
+  display: none;
+}
+
 #skip {
   padding: 10px 28px;
   border: 1px solid #555;
