@@ -313,14 +313,14 @@ function lancerPartie(entree) {
   // ou l'alerte change (bouton « Position de tir », son « tir débloqué »).
   function imageCourse(t) {
     const e = course.etat();
+    if (e.phase === 'fini' && !tirDebloqueSonne) { // aussitôt, sans attendre la limite de rendu
+      tirDebloqueSonne = true;
+      son.tirDebloque();
+    }
     const cle = `${e.phase}|${alerteGps}|${allumageCamera}|${etat.score}`;
     if (cle === dernierEtatRendu && t - dernierRendu < INTERVALLE_RENDU_COURSE_MS) return;
     dernierEtatRendu = cle;
     dernierRendu = t;
-    if (e.phase === 'fini' && !tirDebloqueSonne) {
-      tirDebloqueSonne = true;
-      son.tirDebloque();
-    }
     boutonTir.disabled = e.phase !== 'fini' || allumageCamera;
     rendu.course(e, alerteGps, etat.score, etat.derniereSerie, {
       temps: formaterDuree(Date.now() - debutPartie),

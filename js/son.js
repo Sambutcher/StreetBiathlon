@@ -2,16 +2,28 @@
 // Le contexte audio se crée et se réveille sur un geste de l'utilisateur (`activerSon`) ; sans lui,
 // toutes les fonctions sont sans effet. Timbres à régler à l'oreille avec les constantes ci-dessous.
 
-const VOLUME = 1; // gain général
+const VOLUME = 4; // gain général (derrière le compresseur)
+const BIPS_DEBLOCAGE = 3; // nombre de bips quand les 100 m sont faits
+const FREQ_DEBLOCAGE = 1760; // Hz, zone où l'oreille est la plus sensible
 const DELAI_IMPACT = 0.07; // s entre le coup de feu et son résultat (touche / raté)
 
 let ctx = null;
+let sortie = null; // compresseur : évite la saturation malgré le gain élevé
 let bufferBruit = null;
 
 // À appeler dans un gestionnaire de clic.
 export function activerSon() {
   try {
-    ctx ||= new (window.AudioContext || window.webkitAudioContext)();
+    if (navigator.audioSession) navigator.audioSession.type = 'playback';
+    if (!ctx) {
+      ctx = new (window.AudioContext || window.webkitAudioContext)();
+      sortie = ctx.createDynamicsCompressor();
+      sortie.threshold.value = -6;
+      sortie.knee.value = 0;
+      sortie.ratio.value = 20;
+      sortie.attack.value = 0.002;
+      sortie.connect(ctx.destination);
+    }
     if (ctx.state !== 'running') ctx.resume();
   } catch (e) {
     console.warn('Son indisponible :', e);
@@ -22,6 +34,15 @@ function pret() {
   return ctx !== null && ctx.state === 'running';
 }
 
+// Attaque courte, niveau tenu 70 % de la durée, puis extinction : bien plus fort à l'oreille
+// qu'une décroissance immédiate, à crête égale.
+function enveloppe(gain, t, duree, niveau) {
+  gain.gain.setValueAtTime(0.001, t);
+  gain.gain.linearRampToValueAtTime(niveau, t + 0.004);
+  gain.gain.setValueAtTime(niveau, t + duree * 0.7);
+  gain.gain.exponentialRampToValueAtTime(0.001, t + duree);
+}
+
 // Note qui glisse de `freq` à `fin` en `duree` secondes, s'éteignant en fondu.
 function note(freq, debut, duree, { type = 'sine', volume = 0.25, fin = freq } = {}) {
   const t = ctx.currentTime + debut;
@@ -30,9 +51,8 @@ function note(freq, debut, duree, { type = 'sine', volume = 0.25, fin = freq } =
   osc.type = type;
   osc.frequency.setValueAtTime(freq, t);
   osc.frequency.exponentialRampToValueAtTime(fin, t + duree);
-  gain.gain.setValueAtTime(volume * VOLUME, t);
-  gain.gain.exponentialRampToValueAtTime(0.001, t + duree);
-  osc.connect(gain).connect(ctx.destination);
+  enveloppe(gain, t, duree, volume * VOLUME);
+  osc.connect(gain).connect(sortie);
   osc.start(t);
   osc.stop(t + duree);
 }
@@ -51,9 +71,8 @@ function bruit(debut, duree, { filtre = 'lowpass', freq = 2000, volume = 0.4 } =
   src.buffer = bufferBruit;
   f.type = filtre;
   f.frequency.value = freq;
-  gain.gain.setValueAtTime(volume * VOLUME, t);
-  gain.gain.exponentialRampToValueAtTime(0.001, t + duree);
-  src.connect(f).connect(gain).connect(ctx.destination);
+  enveloppe(gain, t, duree, volume * VOLUME);
+  src.connect(f).connect(gain).connect(sortie);
   src.start(t, Math.random() * 0.5);
   src.stop(t + duree);
 }
@@ -68,34 +87,33 @@ export function tir() {
 // Touche : « ting » métallique.
 export function touche() {
   if (!pret()) return;
-  note(1320, DELAI_IMPACT, 0.5, { volume: 0.25 });
-  note(1980, DELAI_IMPACT, 0.35, { volume: 0.12 });
+  note(1320, DELAI_IMPACT, 0.5, { type: 'triangle', volume: 0.8 });
+  note(1980, DELAI_IMPACT, 0.35, { type: 'triangle', volume: 0.4 });
 }
 
 // Touche sur la balle doublée : le « ting » précédé d'une petite montée.
 export function bonus() {
   if (!pret()) return;
-  [1047, 1319, 1568].forEach((f, i) => note(f, DELAI_IMPACT + i * 0.08, 0.3, { type: 'triangle', volume: 0.22 }));
-  note(2093, DELAI_IMPACT + 0.24, 0.6, { volume: 0.2 });
+  [1047, 1319, 1568].forEach((f, i) => note(f, DELAI_IMPACT + i * 0.08, 0.3, { type: 'triangle', volume: 0.8 }));
+  note(2093, DELAI_IMPACT + 0.24, 0.6, { type: 'triangle', volume: 0.6 });
 }
 
 // Détente sans cartouche : clic sec.
 export function vide() {
   if (!pret()) return;
-  bruit(0, 0.03, { filtre: 'bandpass', freq: 2500, volume: 0.35 });
-  note(220, 0, 0.05, { type: 'square', fin: 120, volume: 0.08 });
+  bruit(0, 0.03, { filtre: 'bandpass', freq: 2500, volume: 0.7 });
+  note(220, 0, 0.05, { type: 'square', fin: 120, volume: 0.2 });
 }
 
-// 100 m faits, le tir est débloqué : double bip.
+// 100 m faits, le tir est débloqué : bips répétés, aigus et forts.
 export function tirDebloque() {
   if (!pret()) return;
-  note(880, 0, 0.11, { type: 'square', volume: 0.12 });
-  note(880, 0.17, 0.11, { type: 'square', volume: 0.12 });
+  for (let i = 0; i < BIPS_DEBLOCAGE; i++) note(FREQ_DEBLOCAGE, i * 0.28, 0.18, { type: 'square', volume: 1 });
 }
 
 // Tir sans cible : « bug » d'ordinateur, buzz carré qui chute en trois saccades.
 export function bug() {
   if (!pret()) return;
-  [0, 0.11, 0.22].forEach((d, i) => note(300 - i * 70, d, 0.09, { type: 'sawtooth', fin: 90, volume: 0.22 }));
-  bruit(0.05, 0.25, { filtre: 'highpass', freq: 3000, volume: 0.12 });
+  [0, 0.11, 0.22].forEach((d, i) => note(300 - i * 70, d, 0.09, { type: 'sawtooth', fin: 90, volume: 0.45 }));
+  bruit(0.05, 0.25, { filtre: 'highpass', freq: 3000, volume: 0.25 });
 }
