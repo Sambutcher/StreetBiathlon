@@ -15,7 +15,7 @@ import { nouvelEtat, debloquerTir, finSerie, serieTerminee, multiplicateur, voir
 import { cadrage, letterbox, versEcran, plusProcheDe, ronds, zoneDetection, placementVideo, distanceFeu, pointsPourDistance } from './geometry.js';
 
 const URL_MODELE = 'models/yolo11n/model.json';
-const ZOOM = 2; // zoom numérique de l'image affichée
+const ZOOMS_BETA = [2, 3, 4, 6]; // zooms numériques proposés par le bouton de la version beta (?beta)
 const INTERVALLE_DETECTION_MS = 80;
 const INTERVALLE_RENDU_COURSE_MS = 500; // écran de course, caméra éteinte
 const LARGEUR_FLUX = 120; // largeur de l'image réduite pour le flux optique
@@ -28,7 +28,8 @@ const DUREE_REBOND_MS = 300; // grossissement du score après une touche
 const FOV_HORIZONTAL_DEG = 50; // champ de vision du côté court du flux (à calibrer avec ?debug)
 const HAUTEUR_FEU_M = 0.75; // hauteur réelle de la boîte détectée
 const PARAMS = new URLSearchParams(location.search);
-const DEBUG = PARAMS.has('debug'); // diagnostic à l'écran
+const BETA = PARAMS.has('beta'); // version d'essai : bouton de zoom + diagnostic
+const DEBUG = PARAMS.has('debug') || BETA; // diagnostic à l'écran
 const SIMGPS = PARAMS.has('simgps'); // course simulée, pour tester sans courir
 
 const accueil = document.getElementById('accueil');
@@ -40,6 +41,7 @@ const pasDeTir = document.getElementById('pas-de-tir');
 const boutonTir = document.getElementById('position-tir');
 const erreurCamera = document.getElementById('erreur-camera');
 const boutonSkip = document.getElementById('skip');
+const boutonZoom = document.getElementById('zoom');
 const boutonFin = document.getElementById('fin-course');
 const recapPoints = document.getElementById('recap-points');
 const rondsAccueil = document.querySelectorAll('#cible-accueil i');
@@ -147,6 +149,7 @@ function lancerPartie(entree) {
   let dernierEtatRendu = '';
   let cycleDetection = 0;
   let zoneAnalysee = null;
+  let zoom = ZOOMS_BETA[0]; // zoom numérique de l'image affichée (×2 hors beta)
 
   const canvasFlux = document.createElement('canvas'); // image réduite en gris pour le flux optique
   const ctxFlux = canvasFlux.getContext('2d', { willReadFrequently: true });
@@ -174,10 +177,24 @@ function lancerPartie(entree) {
     grisPrec = null;
     cible = null;
     zoneAnalysee = null;
+    boutonZoom.hidden = !BETA;
     etat = debloquerTir(etat);
     dernierEvenementTir = performance.now();
     parcours.enregistrerDebutSerie(Date.now());
     pasDeTir.hidden = true;
+  });
+
+  // Version beta : un tap passe au zoom suivant. La cible suivie est en coordonnées écran, elle
+  // n'a plus de sens après un changement de cadrage : on repart de zéro, comme à la position de tir.
+  boutonZoom.addEventListener('pointerdown', (ev) => ev.stopPropagation());
+  boutonZoom.addEventListener('click', (ev) => {
+    ev.stopPropagation();
+    zoom = ZOOMS_BETA[(ZOOMS_BETA.indexOf(zoom) + 1) % ZOOMS_BETA.length];
+    boutonZoom.textContent = `×${zoom}`;
+    suivi = creerSuivi();
+    grisPrec = null;
+    cible = null;
+    zoneAnalysee = null;
   });
 
   // « Fin de course » : arrête GPS et jeu, affiche le récapitulatif (chiffres + carte du parcours).
@@ -238,6 +255,7 @@ function lancerPartie(entree) {
     dernierEtatRendu = '';
     erreurCamera.textContent = '';
     pasDeTir.hidden = false;
+    boutonZoom.hidden = true;
   }
 
   // Tap = tir au centre de l'écran (croix de visée).
@@ -361,7 +379,7 @@ function lancerPartie(entree) {
 
   function imageTir(t) {
     if (!video.videoWidth) return; // caméra pas encore prête
-    const c = cadrage(video.videoWidth, video.videoHeight, rendu.largeur, rendu.hauteur, ZOOM);
+    const c = cadrage(video.videoWidth, video.videoHeight, rendu.largeur, rendu.hauteur, zoom);
     suivreImage(c);
     if (!detectionEnCours && t - derniereDetection >= INTERVALLE_DETECTION_MS) lancerDetection(c, t);
 
@@ -407,6 +425,7 @@ function lancerPartie(entree) {
     rendu.diagnostic([
       ...stats.texte,
       `décalage ${f.fiable ? `${f.dx},${f.dy}` : '—'}`,
+      `zoom ×${zoom}`,
       `zone ${zoneAnalysee ? zoneAnalysee.type : '—'}`,
       `distance ${distance === null ? '—' : `${distance.toFixed(1)} m`}`,
     ]);
