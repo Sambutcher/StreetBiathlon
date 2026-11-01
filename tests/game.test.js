@@ -185,3 +185,9 @@ test('bilanSerie : ronds touchés et points de la série seulement', () => {
   assert.deepEqual(bilanSerie(etat), { touches: 1, points: 9 });
   assert.equal(etat.score, 14);
 });
+
+test('finSerie garde le bilan de la série pour l\'écran de course', () => {
+  const etat = finSerie(tirer(voirFeu(enPosition()), cible, haut, 9).etat);
+  assert.deepEqual(etat.derniereSerie, { touches: 1, points: 9 });
+  assert.equal(etat.phase, 'course');
+});

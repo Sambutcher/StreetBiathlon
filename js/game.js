@@ -23,8 +23,10 @@ export function bilanSerie(etat) {
 }
 
 // Série terminée : retour à la course.
+// Le bilan de la série (`derniereSerie`) reste affiché sur l'écran de course suivant.
 export function finSerie(etat) {
-  return { ...etat, phase: 'course', cartouches: 0, cibleVisible: false };
+  const derniereSerie = etat.phase === 'tir' ? bilanSerie(etat) : etat.derniereSerie;
+  return { ...etat, phase: 'course', cartouches: 0, cibleVisible: false, derniereSerie };
 }
 
 export function serieTerminee(etat) {

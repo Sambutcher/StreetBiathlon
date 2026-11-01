@@ -243,11 +243,12 @@ export function creerRendu(canvas) {
     if (tir.resultat === 'touche') {
       if (tir.gain > 0) pastille(`+${tir.gain}`, x, y - 30 - age * 70, '700 30px -apple-system, system-ui, sans-serif', '#2ecc40');
     } else {
+      // Même emplacement et même montée que le « +N » d'une touche.
       ctx.strokeStyle = '#ff4136';
-      ctx.lineWidth = 5;
+      ctx.lineWidth = 10;
       ctx.lineCap = 'round';
-      const r = 14;
-      const yc = boite ? plaque(boite).y + plaque(boite).h + 78 : y + 90;
+      const r = 16;
+      const yc = y - 30 - age * 70;
       ctx.beginPath();
       ctx.moveTo(x - r, yc - r); ctx.lineTo(x + r, yc + r);
       ctx.moveTo(x + r, yc - r); ctx.lineTo(x - r, yc + r);
@@ -272,7 +273,7 @@ export function creerRendu(canvas) {
   // Écran de course (caméra éteinte) : distance à vol d'oiseau depuis le départ (sans plafond)
   // et barre qui se remplit jusqu'à l'objectif, verte quand le tir est débloqué.
   // e = course.etat() ; alerte : message exceptionnel (localisation refusée…), sinon null.
-  function course(e, alerte, score) {
+  function course(e, alerte, score, derniereSerie) {
     ctx.save();
     ctx.fillStyle = '#000';
     ctx.fillRect(0, 0, largeur, hauteur);
@@ -288,6 +289,11 @@ export function creerRendu(canvas) {
     ctx.fillStyle = '#fff';
     ctx.font = '600 28px -apple-system, system-ui, sans-serif';
     ctx.fillText(`${score} pts`, cx, hauteur * 0.2);
+    if (derniereSerie) {
+      ctx.fillStyle = '#aaa';
+      ctx.font = '500 20px -apple-system, system-ui, sans-serif';
+      ctx.fillText(`Dernière série : ${derniereSerie.touches}/${CARTOUCHES} — +${derniereSerie.points} pts`, cx, hauteur * 0.2 + 36);
+    }
 
     const bw = Math.min(largeur - 75, 300);
     const bh = 16;
