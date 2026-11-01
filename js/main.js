@@ -6,9 +6,10 @@ import { suivrePosition, garderEcranAllume } from './position.js';
 import { creerCourse } from './course.js';
 import { chargerDetecteur, detecter } from './detector.js';
 import { creerRendu } from './render.js';
+import * as son from './son.js';
 import { creerSuivi } from './tracker.js';
 import { versGris, estimerDecalage } from './flow.js';
-import { nouvelEtat, debloquerTir, finSerie, serieTerminee, multiplicateur, voirFeu, quitterFeu, tirer, serieEntamee } from './game.js';
+import { nouvelEtat, debloquerTir, finSerie, serieTerminee, bilanSerie, multiplicateur, voirFeu, quitterFeu, tirer, serieEntamee } from './game.js';
 import { cadrage, letterbox, versEcran, plusProcheDe, ronds, zoneDetection, placementVideo, distanceFeu, pointsPourDistance } from './geometry.js';
 
 const URL_MODELE = 'models/yolo11n/model.json';
@@ -52,6 +53,7 @@ if ('serviceWorker' in navigator) {
 
 boutonDemarrer.addEventListener('click', async () => {
   boutonDemarrer.disabled = true;
+  son.activerSon(); // geste utilisateur exigé par iOS
   try {
     garderEcranAllume();
     statut.textContent = 'Chargement du détecteur…';
@@ -89,6 +91,7 @@ function lancerPartie(entree) {
   let cible = null; // boîte écran du feu quand il est visible
   let allumageCamera = false;
   let finSerieA = null; // instant de la 3e balle
+  let tirDebloqueSonne = false; // le bip « 100 m faits » n'est joué qu'une fois par course
   relancerAuRetour(video);
 
   // Mémoire graphique saturée : iOS retire le contexte WebGL de TensorFlow (détection arrêtée,
@@ -125,6 +128,7 @@ function lancerPartie(entree) {
 
   // « Position de tir » : rallume la caméra (geste utilisateur, exigé par iOS) et charge la carabine.
   boutonTir.addEventListener('click', async () => {
+    son.activerSon();
     if (course.etat().phase !== 'fini' || allumageCamera) return;
     allumageCamera = true;
     boutonTir.disabled = true;
@@ -152,6 +156,7 @@ function lancerPartie(entree) {
     etat = finSerie(etat);
     cible = null;
     finSerieA = null;
+    tirDebloqueSonne = false;
     course.demarrer(Date.now());
     erreurCamera.textContent = '';
     pasDeTir.hidden = false;
@@ -160,11 +165,22 @@ function lancerPartie(entree) {
   // Tap = tir au centre de l'écran (croix de visée).
   canvas.addEventListener('pointerdown', (ev) => {
     ev.preventDefault();
+    if (serieTerminee(etat)) { son.vide(); return; }
     if (!cible) return;
+    const bonus = multiplicateur(etat) > 1;
     const r = tirer(etat, cible, { x: rendu.largeur / 2, y: rendu.hauteur / 2 }, pointsEnJeu ?? 0);
     etat = r.etat;
-    if (r.resultat) dernierTir = { resultat: r.resultat, t: performance.now(), gain: r.gain };
-    if (serieTerminee(etat) && finSerieA === null) finSerieA = performance.now();
+    if (r.resultat) {
+      dernierTir = { resultat: r.resultat, t: performance.now(), gain: r.gain };
+      son.tir();
+      if (r.resultat === 'rate') son.rate();
+      else if (bonus) son.bonus();
+      else son.touche();
+    }
+    if (serieTerminee(etat) && finSerieA === null) {
+      finSerieA = performance.now();
+      son.fanfare(bilanSerie(etat).touches);
+    }
   });
 
   // Flux optique : déplacement de l'image depuis la trame précédente, appliqué à la cible.
@@ -244,6 +260,10 @@ function lancerPartie(entree) {
 
   function imageCourse() {
     const e = course.etat();
+    if (e.phase === 'fini' && !tirDebloqueSonne) {
+      tirDebloqueSonne = true;
+      son.tirDebloque();
+    }
     boutonTir.disabled = e.phase !== 'fini' || allumageCamera;
     rendu.course(e, alerteGps, etat.score, etat.derniereSerie);
     if (DEBUG) {
