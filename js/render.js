@@ -216,8 +216,19 @@ export function creerRendu(canvas) {
     if (boite) {
       const p = plaque(boite);
       const x = Math.min(Math.max(boite.x + boite.w / 2, 30), largeur - 30);
-      pastille(enJeu === null ? '?' : `${enJeu}`, x, p.y + p.h + 30, '700 26px -apple-system, system-ui, sans-serif',
-        enJeu === null ? '#ccc' : '#ffdc00');
+      // Sans pastille : contour sombre pour rester lisible sur tout fond.
+      ctx.save();
+      ctx.font = '700 28px -apple-system, system-ui, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.lineJoin = 'round';
+      ctx.lineWidth = 5;
+      ctx.strokeStyle = 'rgba(0,0,0,0.75)';
+      const texte = enJeu === null ? '?' : `${enJeu}`;
+      ctx.strokeText(texte, x, p.y + p.h + 30);
+      ctx.fillStyle = enJeu === null ? '#ccc' : '#ffdc00';
+      ctx.fillText(texte, x, p.y + p.h + 30);
+      ctx.restore();
     }
   }
 
