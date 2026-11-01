@@ -5,7 +5,8 @@ import { ronds, rondVise, plaque, dansRect } from './geometry.js';
 
 export const CARTOUCHES = 3;
 
-const cibleVierge = () => ({ touches: [false, false, false], impacts: [] });
+// `tirs` : détail de chaque balle tirée { rond (0 haut, 1 milieu, 2 bas, null si raté), points, double, sansCible }.
+const cibleVierge = () => ({ touches: [false, false, false], impacts: [], tirs: [] });
 
 // Une partie commence par la course jusqu'au pas de tir.
 export function nouvelEtat() {
@@ -19,7 +20,7 @@ export function debloquerTir(etat) {
 
 // Bilan de la série en cours : ronds touchés et points marqués depuis la position de tir.
 export function bilanSerie(etat) {
-  return { touches: etat.touches.filter(Boolean).length, points: etat.score - etat.scoreDebutSerie };
+  return { touches: etat.touches.filter(Boolean).length, points: etat.score - etat.scoreDebutSerie, tirs: etat.tirs };
 }
 
 // Série terminée : retour à la course.
@@ -60,7 +61,8 @@ export function tirer(etat, boite, viseur, points = 0) {
   if (etat.phase !== 'tir' || etat.cartouches === 0) return { etat, resultat: null, gain: 0 };
   // Tir sans feu visible : raté, la cartouche est perdue.
   if (!etat.cibleVisible) {
-    return { etat: { ...etat, cartouches: etat.cartouches - 1 }, resultat: 'rate', gain: 0, sansCible: true };
+    const tirs = [...etat.tirs, { rond: null, points: 0, double: false, sansCible: true }];
+    return { etat: { ...etat, cartouches: etat.cartouches - 1, tirs }, resultat: 'rate', gain: 0, sansCible: true };
   }
   const i = rondVise(ronds(boite), viseur);
   const touche = i >= 0 && !etat.touches[i];
@@ -72,7 +74,14 @@ export function tirer(etat, boite, viseur, points = 0) {
   }
   const gain = touche ? points * multiplicateur(etat) : 0;
   return {
-    etat: { ...etat, cartouches: etat.cartouches - 1, touches, impacts, score: etat.score + gain },
+    etat: {
+      ...etat,
+      cartouches: etat.cartouches - 1,
+      touches,
+      impacts,
+      score: etat.score + gain,
+      tirs: [...etat.tirs, { rond: touche ? i : null, points: gain, double: touche && multiplicateur(etat) > 1, sansCible: false }],
+    },
     resultat: touche ? 'touche' : 'rate',
     gain,
   };

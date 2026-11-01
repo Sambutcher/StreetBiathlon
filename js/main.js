@@ -5,7 +5,7 @@ import { demarrerCamera, arreterCamera, relancerAuRetour } from './camera.js';
 import { suivrePosition, garderEcranAllume } from './position.js';
 import { creerCourse } from './course.js';
 import { creerParcours, formaterDuree, formaterDistance, formaterSecondes, statistiques } from './parcours.js';
-import { dessinerCarte } from './carte.js';
+import { dessinerCarte, pasProche } from './carte.js';
 import { chargerDetecteur, detecter } from './detector.js';
 import { creerRendu } from './render.js';
 import * as son from './son.js';
@@ -45,6 +45,7 @@ const recapPoints = document.getElementById('recap-points');
 const rondsAccueil = document.querySelectorAll('#cible-accueil i');
 const recap = document.getElementById('recap');
 const recapChiffres = document.getElementById('recap-chiffres');
+const detailTir = document.getElementById('detail-tir');
 document.getElementById('nouvelle-partie').addEventListener('click', () => location.reload());
 
 // Pas de zoom : iOS ignore user-scalable=no, le pincement se bloque par gesturestart.
@@ -199,7 +200,30 @@ function lancerPartie(entree) {
       ligne('Temps / tour', st.tempsMoyenTour === null ? '—' : formaterDuree(st.tempsMoyenTour)),
     ].join('');
     recap.hidden = false;
-    dessinerCarte(document.getElementById('carte'), resume, { haut: 110, bas: 190 });
+    positionsPas = dessinerCarte(document.getElementById('carte'), resume, { haut: 110, bas: 190 });
+    tirsRecap = resume.tirs;
+    detailTir.hidden = true;
+  });
+
+  // Clic sur un pas de tir de la carte : cible finale de la série et points marqués.
+  let positionsPas = [];
+  let tirsRecap = [];
+  document.getElementById('carte').addEventListener('click', (ev) => {
+    const r = ev.currentTarget.getBoundingClientRect();
+    const i = pasProche(positionsPas, ev.clientX - r.left, ev.clientY - r.top);
+    if (i < 0) { detailTir.hidden = true; return; }
+    const t = tirsRecap[i];
+    // Cible finale (ronds blancs = touchés, noirs = non touchés), avec les points de chaque rond
+    // touché à côté : en blanc, en vert pour la balle doublée.
+    const ronds = [0, 1, 2].map((n) => {
+      const b = t.tirs.find((x) => x.rond === n);
+      const cy = 15 + n * 30;
+      const rond = `<circle cx="20" cy="${cy}" r="11" fill="${b ? '#fff' : '#111'}" stroke="${b ? '#a8a8a0' : '#444'}" stroke-width="2"/>`;
+      const points = b ? `<text x="52" y="${cy + 8}" fill="${b.double ? '#2ecc40' : '#fff'}">+${b.points}</text>` : '';
+      return rond + points;
+    });
+    detailTir.innerHTML = `<svg viewBox="0 0 110 90"><rect width="40" height="90" rx="3" fill="#ecece6"/>${ronds.join('')}</svg>`;
+    detailTir.hidden = false;
   });
 
   // Série terminée : caméra coupée, nouvelle course depuis la position actuelle.

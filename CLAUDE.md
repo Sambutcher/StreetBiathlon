@@ -17,7 +17,7 @@
   vérifié à chaque ouverture et la page se recharge quand une nouvelle version prend la main.
 - Dev sur iPhone : `python3 tools/serve.py` (HTTPS auto-signé, port 8443 ; l'IP du PC change : la lire avec `ip -4 addr`, et supprimer `tools/.cert/` si elle change pour regénérer le certificat).
 - Mise en ligne : GitHub Pages sur `main` (https://sambutcher.github.io/StreetBiathlon/),
-  merge fait par Samuel ; release `vX.Y.Z` ensuite.
+  Claude fait seul, après commit + push : PR, merge sur `main`, puis release `vX.Y.Z`.
 - Sons : `js/son.js`, Web Audio synthétisé (pas de fichiers), coupé par le commutateur silencieux d'iOS ; contexte créé sur clic (Démarrer, Position de tir). Pas de bouton on/off. Impossible à tester sans iPhone : timbres réglés à l'oreille par Samuel.
 - Batterie : l'écran de course n'est redessiné que 2 fois/s (`INTERVALLE_RENDU_COURSE_MS`) ; pas de veille écran en course (iOS couperait le GPS).
 - Feuille de route : v1.0.0 = tir + course. v1.1.0 = points (1 point par mètre estimé au feu, FOV à calibrer avec ?debug). v1.3.x = suivi (chrono, distance parcourue) et récap de « Fin de course » avec carte sans fond de plan. À venir : pénalités ?, historique persistant.

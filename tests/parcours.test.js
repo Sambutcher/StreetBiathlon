@@ -73,3 +73,10 @@ test('cap simulé : variation de -0,5° à +2,5° par pas', () => {
   assert.ok(Math.abs(pasSimule(5, () => 0) - 4.5) < 1e-9);
   assert.ok(Math.abs(pasSimule(5, () => 0.999999) - 7.5) < 1e-4);
 });
+
+test('marquerTir conserve le détail des balles', () => {
+  const p = creerParcours(0);
+  p.ajouter(fix(0, 0));
+  p.marquerTir({ touches: 1, points: 20, tirs: [{ rond: 2, points: 20, double: false, sansCible: false }] });
+  assert.equal(p.resume(1).tirs[0].tirs[0].rond, 2);
+});

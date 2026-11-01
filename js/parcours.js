@@ -9,7 +9,7 @@ const PAS_MIN = 2; // m, en deçà : bruit à l'arrêt, ignoré
 
 export function creerParcours(debutMs) {
   const points = []; // { lat, lon, t }
-  const tirs = []; // { lat, lon, touches, points }
+  const tirs = []; // { lat, lon, touches, points, tirs (détail par balle, voir game.js) }
   const delais = []; // durée (ms) de chaque tir : depuis l'affichage de la caméra, puis depuis le tir précédent
   const debutsSeries = []; // instants (ms) d'affichage de la caméra, un par séquence de tir
   let distance = 0;
@@ -31,11 +31,11 @@ export function creerParcours(debutMs) {
       points.push(p);
     },
 
-    // Pas de tir à la dernière position connue ; bilan = { touches, points } de la série.
+    // Pas de tir à la dernière position connue ; bilan = { touches, points, tirs } de la série.
     marquerTir(bilan) {
       const dernier = points[points.length - 1];
       if (!dernier || !bilan) return;
-      tirs.push({ lat: dernier.lat, lon: dernier.lon, touches: bilan.touches, points: bilan.points });
+      tirs.push({ lat: dernier.lat, lon: dernier.lon, touches: bilan.touches, points: bilan.points, tirs: bilan.tirs || [] });
     },
 
     enregistrerDebutSerie(t) {

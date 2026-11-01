@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { nouvelEtat, debloquerTir, finSerie, serieTerminee, voirFeu, quitterFeu, tirer, serieEntamee, CARTOUCHES, bilanSerie, multiplicateur } from '../js/game.js';
+import { ronds } from '../js/geometry.js';
 import { creerSuivi } from '../js/tracker.js';
 
 const cible = { x: 0, y: 0, w: 30, h: 90 }; // boîte du feu ; plaque = marge de 4,5 autour
@@ -184,15 +185,15 @@ test('un rond déjà touché ne rapporte rien et le score survit à la série', 
 test('bilanSerie : ronds touchés et points de la série seulement', () => {
   let etat = tirer(voirFeu(enPosition()), cible, haut, 5).etat;
   etat = debloquerTir(finSerie(etat)); // nouvelle série : le score précédent ne compte pas
-  assert.deepEqual(bilanSerie(etat), { touches: 0, points: 0 });
+  assert.deepEqual(bilanSerie(etat), { touches: 0, points: 0, tirs: [] });
   etat = tirer(voirFeu(etat), cible, haut, 9).etat;
-  assert.deepEqual(bilanSerie(etat), { touches: 1, points: 9 });
+  assert.deepEqual(bilanSerie(etat), { touches: 1, points: 9, tirs: [{ rond: 0, points: 9, double: false, sansCible: false }] });
   assert.equal(etat.score, 14);
 });
 
 test('finSerie garde le bilan de la série pour l\'écran de course', () => {
   const etat = finSerie(tirer(voirFeu(enPosition()), cible, haut, 9).etat);
-  assert.deepEqual(etat.derniereSerie, { touches: 1, points: 9 });
+  assert.deepEqual(etat.derniereSerie, { touches: 1, points: 9, tirs: [{ rond: 0, points: 9, double: false, sansCible: false }] });
   assert.equal(etat.phase, 'course');
 });
 
@@ -219,4 +220,21 @@ test('pas de bonus si un des 2 premiers tirs est raté', () => {
   assert.equal(multiplicateur(etat), 1);
   assert.equal(etat.score, 10);
   assert.equal(tirer(voirFeu(enPosition()), cible, bas, 5).gain, 5);
+});
+
+test('détail des balles : rond touché, points, double, raté, sans cible', () => {
+  const boite = { x: 100, y: 100, w: 40, h: 120 };
+  const [r0, r1] = ronds(boite);
+  let etat = voirFeu(debloquerTir(nouvelEtat()));
+  etat = tirer(etat, boite, r0, 20).etat;
+  etat = tirer(etat, boite, r1, 20).etat;
+  etat = tirer(etat, boite, r0, 20).etat; // rond déjà touché : raté
+  assert.deepEqual(etat.tirs, [
+    { rond: 0, points: 20, double: false, sansCible: false },
+    { rond: 1, points: 20, double: false, sansCible: false },
+    { rond: null, points: 0, double: false, sansCible: false },
+  ]);
+  assert.equal(bilanSerie(etat).tirs.length, 3);
+  const sans = tirer(debloquerTir(nouvelEtat()), boite, r0, 20).etat;
+  assert.deepEqual(sans.tirs, [{ rond: null, points: 0, double: false, sansCible: true }]);
 });
