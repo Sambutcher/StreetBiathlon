@@ -158,3 +158,21 @@ test('éclats conservés à la perte du feu, effacés au rechargement', () => {
   etat = tirer(etat, cible, ailleurs).etat;
   assert.deepEqual(debloquerTir(finSerie(etat)).impacts, []);
 });
+
+test('une touche ajoute les points au score, un raté non', () => {
+  const touche = tirer(voirFeu(enPosition()), cible, haut, 12);
+  assert.equal(touche.resultat, 'touche');
+  assert.equal(touche.gain, 12);
+  assert.equal(touche.etat.score, 12);
+  const rate = tirer(voirFeu(enPosition()), cible, ailleurs, 12);
+  assert.equal(rate.gain, 0);
+  assert.equal(rate.etat.score, 0);
+});
+
+test('un rond déjà touché ne rapporte rien et le score survit à la série', () => {
+  const premiere = tirer(voirFeu(enPosition()), cible, haut, 7).etat;
+  const deuxieme = tirer(premiere, cible, haut, 7);
+  assert.equal(deuxieme.gain, 0);
+  assert.equal(deuxieme.etat.score, 7);
+  assert.equal(debloquerTir(finSerie(deuxieme.etat)).score, 7);
+});

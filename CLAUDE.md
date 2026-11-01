@@ -18,6 +18,6 @@
 - Dev sur iPhone : `python3 tools/serve.py` (HTTPS auto-signé, IP locale 192.168.1.147:8443).
 - Mise en ligne : GitHub Pages sur `main` (https://sambutcher.github.io/StreetBiathlon/),
   merge fait par Samuel ; release `vX.Y.Z` ensuite.
-- Feuille de route : v1.0.0 = tir + course. À venir : score/chrono (pénalités ?), historique.
+- Feuille de route : v1.0.0 = tir + course. v1.1.0 = points (1 point par mètre estimé au feu, FOV à calibrer avec ?debug). À venir : chrono (pénalités ?), historique.
 - Ne pas tester les pages dans Chromium : Samuel teste lui-même (navigateur, iPhone).
 - Langue du code et des textes : français.

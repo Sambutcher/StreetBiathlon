@@ -9,7 +9,7 @@ const cibleVierge = () => ({ touches: [false, false, false], impacts: [] });
 
 // Une partie commence par la course jusqu'au pas de tir.
 export function nouvelEtat() {
-  return { phase: 'course', cartouches: 0, ...cibleVierge(), cibleVisible: false };
+  return { phase: 'course', cartouches: 0, ...cibleVierge(), cibleVisible: false, score: 0 };
 }
 
 // En position de tir : carabine chargée, cible vierge.
@@ -40,10 +40,11 @@ export function quitterFeu(etat) {
 
 // Tir au point `viseur` sur la cible dessinée autour de `boite`.
 // resultat : 'touche', 'rate', ou null si le tir est impossible (pas de feu, plus de balles).
+// Une touche ajoute `points` au score ; `gain` vaut les points marqués par ce tir.
 // Un raté sur la plaque laisse un éclat, mémorisé en coordonnées relatives à la plaque (0–1)
 // pour suivre la cible quand elle bouge ou change de taille.
-export function tirer(etat, boite, viseur) {
-  if (etat.phase !== 'tir' || !etat.cibleVisible || etat.cartouches === 0) return { etat, resultat: null };
+export function tirer(etat, boite, viseur, points = 0) {
+  if (etat.phase !== 'tir' || !etat.cibleVisible || etat.cartouches === 0) return { etat, resultat: null, gain: 0 };
   const i = rondVise(ronds(boite), viseur);
   const touche = i >= 0 && !etat.touches[i];
   const touches = touche ? etat.touches.map((t, j) => t || j === i) : etat.touches;
@@ -53,7 +54,8 @@ export function tirer(etat, boite, viseur) {
     impacts = [...impacts, { u: (viseur.x - p.x) / p.w, v: (viseur.y - p.y) / p.h }];
   }
   return {
-    etat: { ...etat, cartouches: etat.cartouches - 1, touches, impacts },
+    etat: { ...etat, cartouches: etat.cartouches - 1, touches, impacts, score: etat.score + (touche ? points : 0) },
     resultat: touche ? 'touche' : 'rate',
+    gain: touche ? points : 0,
   };
 }

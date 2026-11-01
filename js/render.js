@@ -188,6 +188,24 @@ export function creerRendu(canvas) {
     ctx.restore();
   }
 
+  // Score global (haut à droite) et points en jeu pour le feu visé (dessous), null sans feu.
+  function points(score, enJeu) {
+    ctx.save();
+    ctx.textAlign = 'right';
+    ctx.textBaseline = 'top';
+    ctx.shadowColor = 'rgba(0,0,0,0.7)';
+    ctx.shadowBlur = 4;
+    ctx.fillStyle = '#fff';
+    ctx.font = '700 32px -apple-system, system-ui, sans-serif';
+    ctx.fillText(`${score} pts`, largeur - 16, margeHaut + 16);
+    if (enJeu !== null) {
+      ctx.fillStyle = '#ffdc00';
+      ctx.font = '600 20px -apple-system, system-ui, sans-serif';
+      ctx.fillText(`+${enJeu}`, largeur - 16, margeHaut + 54);
+    }
+    ctx.restore();
+  }
+
   function flash(resultat, intensite) {
     ctx.save();
     ctx.globalAlpha = 0.35 * intensite;
@@ -204,7 +222,7 @@ export function creerRendu(canvas) {
   // Écran de course (caméra éteinte) : distance à vol d'oiseau depuis le départ (sans plafond)
   // et barre qui se remplit jusqu'à l'objectif, verte quand le tir est débloqué.
   // e = course.etat() ; alerte : message exceptionnel (localisation refusée…), sinon null.
-  function course(e, alerte) {
+  function course(e, alerte, score) {
     ctx.save();
     ctx.fillStyle = '#000';
     ctx.fillRect(0, 0, largeur, hauteur);
@@ -217,6 +235,9 @@ export function creerRendu(canvas) {
     ctx.fillStyle = debloque ? '#2ecc40' : '#fff';
     ctx.font = '700 96px -apple-system, system-ui, sans-serif';
     ctx.fillText(enCourse ? `${Math.floor(e.distance)} m` : '— m', cx, hauteur * 0.4);
+    ctx.fillStyle = '#fff';
+    ctx.font = '600 28px -apple-system, system-ui, sans-serif';
+    ctx.fillText(`${score} pts`, cx, hauteur * 0.2);
 
     const bw = Math.min(largeur - 75, 300);
     const bh = 16;
@@ -265,6 +286,6 @@ export function creerRendu(canvas) {
   return {
     get largeur() { return largeur; },
     get hauteur() { return hauteur; },
-    video, effacer, cible, viseur, cartouches, message, flash, course, zone, diagnostic,
+    video, effacer, cible, viseur, cartouches, message, flash, points, course, zone, diagnostic,
   };
 }

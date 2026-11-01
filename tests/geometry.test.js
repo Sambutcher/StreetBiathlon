@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { cadrage, letterbox, versEcran, plusProcheDe, ronds, rondVise, zoneDetection, zoneVersSource, plaque, dansRect, placementVideo } from '../js/geometry.js';
+import { cadrage, letterbox, versEcran, plusProcheDe, ronds, rondVise, zoneDetection, zoneVersSource, plaque, dansRect, placementVideo, distanceFeu, pointsPourDistance } from '../js/geometry.js';
 
 test('cadrage couvre l\'écran puis zoome au centre', () => {
   // Vidéo portrait 720×1280 sur écran 375×667 : même ratio ≈, zoom 2 → moitié centrale.
@@ -101,4 +101,19 @@ test('plaque et dansRect', () => {
   assert.ok(dansRect({ x: 20, y: 50 }, p));
   assert.ok(!dansRect({ x: 33.5, y: 50 }, p));
   assert.ok(!dansRect({ x: 20, y: 16 }, p));
+});
+
+test('distanceFeu : sténopé, inversement proportionnelle à la hauteur de la boîte', () => {
+  const c = cadrage(720, 1280, 360, 640, 2); // échelle 1, sw = 360
+  // FOV 90° : focale vidéo = 360 px ; focale écran = 360 × 360/360 = 360 px.
+  const d = distanceFeu({ x: 0, y: 0, w: 5, h: 27 }, c, 720, 360, 90, 0.75);
+  assert.ok(Math.abs(d - 10) < 1e-9);
+  const moitie = distanceFeu({ x: 0, y: 0, w: 2.5, h: 13.5 }, c, 720, 360, 90, 0.75);
+  assert.ok(Math.abs(moitie - 20) < 1e-9);
+});
+
+test('pointsPourDistance : 1 point par mètre arrondi, au moins 1', () => {
+  assert.equal(pointsPourDistance(12.4), 12);
+  assert.equal(pointsPourDistance(12.6), 13);
+  assert.equal(pointsPourDistance(0.2), 1);
 });

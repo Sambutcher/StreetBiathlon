@@ -118,3 +118,17 @@ export function plaque(boite) {
 export function dansRect(point, r) {
   return point.x >= r.x && point.x <= r.x + r.w && point.y >= r.y && point.y <= r.y + r.h;
 }
+
+// Distance (m) au feu, par le modèle du sténopé : focale (en pixels écran) × hauteur réelle / hauteur
+// de la boîte. La focale vidéo vient du champ de vision horizontal de la caméra ; `c` est le cadrage
+// affiché (zoom compris), qui fixe le rapport pixels vidéo → écran.
+export function distanceFeu(boite, c, videoW, ecranW, fovDeg, hauteurM) {
+  const focaleVideo = videoW / (2 * Math.tan((fovDeg * Math.PI) / 360));
+  const focaleEcran = focaleVideo * (ecranW / c.sw);
+  return (focaleEcran * hauteurM) / boite.h;
+}
+
+// 1 point par mètre, au moins 1.
+export function pointsPourDistance(metres) {
+  return Math.max(1, Math.round(metres));
+}
